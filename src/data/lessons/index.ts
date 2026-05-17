@@ -11,6 +11,14 @@ import { lesson09 } from "./lesson-09";
 import { lesson10 } from "./lesson-10";
 import { lesson11 } from "./lesson-11";
 import { lesson12 } from "./lesson-12";
+import { lesson13 } from "./lesson-13";
+import { lesson14 } from "./lesson-14";
+import { lesson15 } from "./lesson-15";
+import { lesson16 } from "./lesson-16";
+import { lesson17 } from "./lesson-17";
+import { lesson18 } from "./lesson-18";
+import { lesson19 } from "./lesson-19";
+import { lesson20 } from "./lesson-20";
 
 export const courses: Course[] = [
   lesson01,
@@ -25,4 +33,12 @@ export const courses: Course[] = [
   lesson10,
   lesson11,
   lesson12,
+  lesson13,
+  lesson14,
+  lesson15,
+  lesson16,
+  lesson17,
+  lesson18,
+  lesson19,
+  lesson20,
 ];

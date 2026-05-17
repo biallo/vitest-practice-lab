@@ -6,7 +6,7 @@
 .lesson-content section {
   display: grid;
   gap: 14px;
-  padding: 0 0 28px 18px;
+  padding: 0 0 0 18px;
   border-left: 2px solid rgba(30, 168, 84, 0.16);
 }
 
