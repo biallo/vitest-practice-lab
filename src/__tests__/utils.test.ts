@@ -1,50 +1,60 @@
 import { describe, it, expect } from 'vitest';
 
-function add(a: number, b: number) {
-  return a + b;
-}
-
-function subtract(a: number, b: number) {
-  return a - b;
-}
-
-function multiply(a: number, b: number) {
-  return a * b;
-}
-
-describe('Basic math utilities', () => {
-  describe('add', () => {
-    it('should add two positive numbers', () => {
-      expect(add(2, 3)).toBe(5);
+describe('App utility functions', () => {
+  describe('Hash utilities', () => {
+    it('should extract lesson ID from hash', () => {
+      const hash = '#lesson-1';
+      const lessonId = hash.replace('#', '');
+      expect(lessonId).toBe('lesson-1');
     });
 
-    it('should add positive and negative numbers', () => {
-      expect(add(10, -5)).toBe(5);
+    it('should handle empty hash', () => {
+      const hash = '#';
+      const lessonId = hash.replace('#', '');
+      expect(lessonId).toBe('');
     });
 
-    it('should handle zero', () => {
-      expect(add(0, 5)).toBe(5);
-      expect(add(5, 0)).toBe(5);
+    it('should handle hash with special characters', () => {
+      const hash = '#lesson-advanced-01';
+      const lessonId = hash.replace('#', '');
+      expect(lessonId).toBe('lesson-advanced-01');
     });
   });
 
-  describe('subtract', () => {
-    it('should subtract two numbers', () => {
-      expect(subtract(10, 3)).toBe(7);
+  describe('Set deduplication', () => {
+    it('should remove duplicate lesson IDs', () => {
+      const lessonIds = ['lesson-1', 'lesson-2', 'lesson-1', 'lesson-3', 'lesson-2'];
+      const uniqueIds = Array.from(new Set(lessonIds));
+      expect(uniqueIds).toHaveLength(3);
+      expect(uniqueIds).toEqual(['lesson-1', 'lesson-2', 'lesson-3']);
     });
 
-    it('should handle negative results', () => {
-      expect(subtract(3, 10)).toBe(-7);
+    it('should handle empty array', () => {
+      const lessonIds: string[] = [];
+      const uniqueIds = Array.from(new Set(lessonIds));
+      expect(uniqueIds).toHaveLength(0);
+    });
+
+    it('should preserve order of first occurrence', () => {
+      const lessonIds = ['c', 'b', 'a', 'c', 'b'];
+      const uniqueIds = Array.from(new Set(lessonIds));
+      expect(uniqueIds).toEqual(['c', 'b', 'a']);
     });
   });
 
-  describe('multiply', () => {
-    it('should multiply two numbers', () => {
-      expect(multiply(4, 5)).toBe(20);
+  describe('Array filtering', () => {
+    it('should filter valid lesson IDs', () => {
+      const validIds = ['lesson-1', 'lesson-2', 'lesson-3'];
+      const mixedIds = ['lesson-1', 'invalid', 'lesson-2', 'unknown'];
+      const filtered = mixedIds.filter((id) => validIds.includes(id));
+      expect(filtered).toEqual(['lesson-1', 'lesson-2']);
     });
 
-    it('should handle multiplication by zero', () => {
-      expect(multiply(10, 0)).toBe(0);
+    it('should handle type checking with filter', () => {
+      const data: (string | number | null)[] = ['lesson-1', 123, 'lesson-2', null];
+      const stringIds = data.filter((id): id is string => typeof id === 'string');
+      expect(stringIds).toEqual(['lesson-1', 'lesson-2']);
+      expect(stringIds).toHaveLength(2);
     });
   });
 });

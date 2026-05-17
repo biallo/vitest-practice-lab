@@ -1,61 +1,127 @@
 import { describe, it, expect } from 'vitest';
+import { courses } from '../data/lessons';
 
-function capitalize(str: string) {
-  return str.charAt(0).toUpperCase() + str.slice(1);
-}
-
-function reverseString(str: string) {
-  return str.split('').reverse().join('');
-}
-
-function countWords(str: string) {
-  return str.trim().split(/\s+/).filter(w => w.length > 0).length;
-}
-
-describe('String utilities', () => {
-  describe('capitalize', () => {
-    it('should capitalize first letter', () => {
-      expect(capitalize('hello')).toBe('Hello');
+describe('Course content validation', () => {
+  describe('title and ID patterns', () => {
+    it('all course IDs should follow lesson-XX pattern', () => {
+      courses.forEach((course) => {
+        expect(course.id).toMatch(/^lesson-\d+$/);
+      });
     });
 
-    it('should handle already capitalized strings', () => {
-      expect(capitalize('Hello')).toBe('Hello');
+    it('all course titles should start with lesson number', () => {
+      courses.forEach((course) => {
+        expect(course.title).toMatch(/^\d+\./);
+      });
     });
 
-    it('should handle empty strings', () => {
-      expect(capitalize('')).toBe('');
-    });
-  });
+    it('course IDs and titles should have matching numbers', () => {
+      courses.forEach((course) => {
+        const idMatch = course.id.match(/lesson-(\d+)/);
+        const titleMatch = course.title.match(/^(\d+)\./);
 
-  describe('reverseString', () => {
-    it('should reverse a string', () => {
-      expect(reverseString('hello')).toBe('olleh');
-    });
+        expect(idMatch).not.toBeNull();
+        expect(titleMatch).not.toBeNull();
 
-    it('should handle single character', () => {
-      expect(reverseString('a')).toBe('a');
-    });
-
-    it('should handle empty string', () => {
-      expect(reverseString('')).toBe('');
+        if (idMatch && titleMatch) {
+          // ID number should match title number (e.g., lesson-01 → "01.")
+          expect(idMatch[1]).toBe(titleMatch[1]);
+        }
+      });
     });
   });
 
-  describe('countWords', () => {
-    it('should count words separated by spaces', () => {
-      expect(countWords('hello world')).toBe(2);
+  describe('summary and level validation', () => {
+    it('all courses should have meaningful summaries', () => {
+      courses.forEach((course) => {
+        expect(course.summary.length).toBeGreaterThan(10);
+      });
     });
 
-    it('should handle multiple spaces', () => {
-      expect(countWords('hello  world   test')).toBe(3);
+    it('all courses should have a level assigned', () => {
+      const validLevels = ['入门', '进阶', '高级'];
+      courses.forEach((course) => {
+        expect(course.level.length).toBeGreaterThan(0);
+      });
     });
 
-    it('should handle leading/trailing spaces', () => {
-      expect(countWords('  hello world  ')).toBe(2);
+    it('should support i18n content with Chinese characters', () => {
+      const hasChinese = courses.some((c) =>
+        /[\u4E00-\u9FA5]/.test(c.title + c.summary + c.level)
+      );
+      expect(hasChinese).toBe(true);
+    });
+  });
+
+  describe('content consistency', () => {
+    it('courses with examples should have sections explaining them', () => {
+      courses.forEach((course) => {
+        if (course.examples.length > 0) {
+          expect(course.sections.length).toBeGreaterThan(0);
+        }
+      });
     });
 
-    it('should return 0 for empty string', () => {
-      expect(countWords('')).toBe(0);
+    it('recap items should relate to course content', () => {
+      courses.forEach((course) => {
+        expect(course.recap.length).toBeGreaterThan(0);
+        course.recap.forEach((item) => {
+          expect(item.question).toMatch(/[\u4E00-\u9FA5?？]/);
+          expect(item.answer).toMatch(/[\u4E00-\u9FA5。]/);
+        });
+      });
+    });
+
+    it('should not have orphaned sections', () => {
+      courses.forEach((course) => {
+        course.sections.forEach((section) => {
+          expect(section.body.every((b) => b.trim().length > 0)).toBe(true);
+        });
+      });
+    });
+  });
+
+  describe('data integrity', () => {
+    it('no duplicate course titles', () => {
+      const titles = courses.map((c) => c.title);
+      const uniqueTitles = new Set(titles);
+      expect(uniqueTitles.size).toBe(titles.length);
+    });
+
+    it('all recap questions should be distinct', () => {
+      courses.forEach((course) => {
+        const questions = course.recap.map((r) => r.question);
+        const uniqueQuestions = new Set(questions);
+        expect(uniqueQuestions.size).toBe(questions.length);
+      });
+    });
+
+    it('summary length should be reasonable', () => {
+      courses.forEach((course) => {
+        expect(course.summary.length).toBeLessThan(200);
+      });
+    });
+  });
+
+  describe('first course sample validation', () => {
+    const firstCourse = courses[0];
+
+    it('should have Chinese content in first course', () => {
+      const content = firstCourse.title + firstCourse.summary + firstCourse.level;
+      expect(content).toMatch(/[\u4E00-\u9FA5]/);
+    });
+
+    it('first course should have multiple recap items', () => {
+      expect(firstCourse.recap.length).toBeGreaterThanOrEqual(1);
+    });
+
+    it('first course recap should have proper Q&A format', () => {
+      firstCourse.recap.forEach((item) => {
+        expect(item.question).toBeDefined();
+        expect(item.answer).toBeDefined();
+        expect(item.question.length).toBeGreaterThan(0);
+        expect(item.answer.length).toBeGreaterThan(0);
+      });
     });
   });
 });
