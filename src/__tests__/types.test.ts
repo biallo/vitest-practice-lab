@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
 import { courses } from '../data/lessons';
-import type { Course, LessonSection, LessonExample, RecapItem } from '../types/course';
 
 describe('Real course data structure', () => {
   describe('courses collection', () => {

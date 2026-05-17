@@ -39,7 +39,6 @@ describe('Course content validation', () => {
     });
 
     it('all courses should have a level assigned', () => {
-      const validLevels = ['入门', '进阶', '高级'];
       courses.forEach((course) => {
         expect(course.level.length).toBeGreaterThan(0);
       });
