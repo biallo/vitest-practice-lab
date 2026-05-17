@@ -1,0 +1,91 @@
+@media (max-width: 760px) {
+  .app-shell {
+    display: block;
+  }
+
+  .course-sidebar {
+    position: static;
+    height: auto;
+    display: block;
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .brand {
+    min-height: auto;
+    padding: 18px 18px 14px;
+  }
+
+  .mobile-course-picker {
+    display: grid;
+    gap: 8px;
+    padding: 0 18px 18px;
+  }
+
+  .mobile-course-picker select {
+    width: 100%;
+    min-height: 44px;
+    padding: 0 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--panel-bg);
+    color: var(--text-strong);
+    font: 16px var(--sans);
+  }
+
+  .course-list {
+    display: none;
+  }
+
+  .lesson-panel {
+    width: auto;
+    padding: 26px 18px 48px;
+  }
+
+  .lesson-header {
+    display: grid;
+    gap: 14px;
+    padding-bottom: 22px;
+  }
+
+  .lesson-header h1 {
+    font-size: 36px;
+  }
+
+  .lesson-header p:not(.eyebrow) {
+    font-size: 16px;
+  }
+
+  .tab-list {
+    width: 100%;
+  }
+
+  .tab-list button {
+    flex: 1;
+  }
+
+  .feature-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .code-block code {
+    min-width: 620px;
+  }
+
+  .recap-item summary {
+    grid-template-columns: 34px minmax(0, 1fr);
+    padding: 14px;
+  }
+
+  .recap-item p {
+    padding: 0 14px 16px 60px;
+  }
+
+  .recap-actions {
+    display: block;
+  }
+
+  .recap-actions .complete-button {
+    width: 100%;
+  }
+}

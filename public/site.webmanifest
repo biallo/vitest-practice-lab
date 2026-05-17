@@ -1,0 +1,33 @@
+{
+  "name": "Vitest Practice Lab",
+  "short_name": "Vitest Lab",
+  "description": "一个用于学习 Vitest 的 React + TypeScript 练习项目。",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#f7f8f5",
+  "theme_color": "#1ea854",
+  "icons": [
+    {
+      "src": "vitest-icons/pwa-64x64.png",
+      "sizes": "64x64",
+      "type": "image/png"
+    },
+    {
+      "src": "vitest-icons/pwa-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "vitest-icons/pwa-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "vitest-icons/maskable-icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
