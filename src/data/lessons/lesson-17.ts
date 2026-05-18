@@ -2,103 +2,86 @@ import type { Course } from "../../types/course";
 
 export const lesson17: Course = {
   id: "lesson-17",
-  title: "14. 测试 React Hook",
-  level: "进阶",
-  summary: "通过组件或 renderHook 验证自定义 Hook 的状态、事件和异步行为。",
+  title: "17. CI 与报告",
+  level: "工程化",
+  summary: "在 GitHub Actions 中运行测试，输出稳定日志并保留诊断信息。",
   sections: [
     {
-      heading: "优先通过使用场景测试",
+      heading: "CI 的目标是稳定反馈",
       body: [
-        "自定义 Hook 本质上是组件逻辑。只要 Hook 的行为最终体现在界面上，优先通过组件测试验证用户能看到和操作的结果。",
-        "直接测试 Hook 适合纯逻辑 Hook、复用复杂状态机、或组件外壳会让测试噪音过大的场景。",
+        "CI 中的测试应该可重复、可结束、日志足够清楚。它不是本地 watch 模式的替代品，而是每次提交后的质量闸门。",
+        "Node 版本、包管理器、时区、环境变量和操作系统都可能让 CI 与本地表现不同。把这些条件写进 workflow，才能减少随机失败。",
       ],
     },
     {
-      heading: "renderHook 的价值",
+      heading: "使用 npm ci 和锁文件",
       body: [
-        "renderHook 可以在测试中运行 Hook，并通过 result.current 读取当前状态。触发会改变状态的函数时，需要用 act 包住。",
-        "它适合测试 useCounter、usePagination、useLocalStorage 这类状态逻辑清晰的 Hook。",
+        "CI 中推荐使用 npm ci，它会严格按 package-lock.json 安装依赖，并在 lockfile 与 package.json 不一致时报错。",
+        "依赖缓存应该缓存包管理器缓存，而不是缓存 node_modules。node_modules 缓存容易掩盖安装问题。",
       ],
     },
     {
-      heading: "异步 Hook",
+      heading: "报告与排查",
       body: [
-        "异步 Hook 经常涉及 loading、success、error 三种状态。测试时要先断言初始状态，再用 waitFor 等待状态稳定。",
-        "不要用固定延迟等待异步完成。固定等待会让测试慢且不稳定，应该等待某个明确的状态或 UI 结果。",
+        "失败日志要让读者能快速看到哪个文件、哪个测试、哪个断言失败。必要时可以增加 reporter、coverage 或上传 artifact。",
+        "如果某些测试只在 CI 失败，优先检查并发、时区、未声明环境变量、文件系统大小写和真实网络依赖。",
       ],
     },
   ],
   examples: [
     {
-      title: "测试同步状态 Hook",
-      code: `import { act, renderHook } from '@testing-library/react'
-import { expect, it } from 'vitest'
-import { useCounter } from './use-counter'
+      title: "GitHub Actions 中运行 Vitest",
+      code: `name: Test
 
-it('increments the counter', () => {
-  const { result } = renderHook(() => useCounter(0))
+on: [push, pull_request]
 
-  act(() => {
-    // 重点：触发 React 状态更新的操作要放进 act
-    result.current.increment()
-  })
-
-  expect(result.current.count).toBe(1)
-})`,
-      focusLines: [6, 8, 9, 10, 13],
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run test:run`,
+      focusLines: [12, 14, 15],
     },
     {
-      title: "测试异步 Hook 状态",
-      code: `import { renderHook, waitFor } from '@testing-library/react'
-import { expect, it, vi } from 'vitest'
-import { useUser } from './use-user'
-import { fetchUser } from './api'
-
-vi.mock('./api', () => ({
-  fetchUser: vi.fn()
-}))
-
-it('loads user data', async () => {
-  vi.mocked(fetchUser).mockResolvedValue({ id: 'u1', name: 'Ada' })
-
-  const { result } = renderHook(() => useUser('u1'))
-
-  expect(result.current.status).toBe('loading')
-
-  await waitFor(() => {
-    // 重点：等待明确状态，而不是等待固定毫秒数
-    expect(result.current.status).toBe('success')
-  })
-  expect(result.current.user?.name).toBe('Ada')
-})`,
-      focusLines: [11, 13, 15, 17, 18, 19, 21],
+      title: "本地复现 CI 命令",
+      code: `npm ci
+npm run lint
+npm run test:run
+npm run build`,
+      focusLines: [3, 4],
     },
   ],
   recap: [
     {
-      question: "什么时候应该通过组件测试 Hook？",
+      question: "为什么 CI 推荐 npm ci？",
       answer:
-        "当 Hook 行为最终体现在界面或用户交互上时，优先通过组件测试，因为它更接近真实使用方式。",
+        "npm ci 会严格按照 lockfile 安装依赖，保证 CI 环境可复现，并能及时发现锁文件不一致。",
     },
     {
-      question: "renderHook 适合什么场景？",
+      question: "CI 中为什么应该运行 test:run 而不是 test？",
       answer:
-        "适合测试纯状态逻辑、自定义复用逻辑、分页、表单状态、本地存储封装等组件外壳噪音较大的 Hook。",
+        "test:run 是一次性运行，会自然结束；test 常用于 watch 模式，可能让 CI 一直等待。",
     },
     {
-      question: "为什么状态更新要放进 act？",
+      question: "CI 偶发失败常见原因有哪些？",
       answer:
-        "act 会告诉 React 测试正在执行一次状态更新，让渲染和副作用完成后再进行断言。",
+        "并发竞争、时区差异、环境变量缺失、文件系统大小写、真实网络依赖和本地未提交文件。",
     },
     {
-      question: "异步 Hook 测试为什么不推荐固定等待？",
+      question: "为什么不建议缓存 node_modules？",
       answer:
-        "固定等待会让测试慢且不稳定。waitFor 等待明确状态更快，也更能表达测试意图。",
+        "node_modules 缓存可能掩盖安装问题。更稳妥的是缓存包管理器缓存，再用 npm ci 重建依赖。",
     },
     {
-      question: "异步 Hook 通常应该覆盖哪些状态？",
+      question: "失败日志和 artifact 的价值是什么？",
       answer:
-        "至少覆盖 loading、success 和 error。复杂场景还应覆盖取消请求、参数变化和重复请求。",
+        "它们能帮助回看失败现场，快速定位哪个测试、断言、覆盖率或截图暴露了问题。",
     },
   ],
 };

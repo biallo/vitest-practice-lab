@@ -2,92 +2,108 @@ import type { Course } from "../../types/course";
 
 export const lesson11: Course = {
   id: "lesson-11",
-  title: "18. 从 Jest 迁移",
-  level: "迁移",
-  summary: "比较 Jest 与 Vitest API、配置和迁移策略，降低迁移风险。",
+  title: "11. 模块 Mock",
+  level: "进阶",
+  summary:
+    "学习 vi.mock、部分 mock 和模块缓存控制，隔离网络、时间和第三方依赖。",
   sections: [
     {
-      heading: "先迁移运行环境",
+      heading: "为什么 mock 模块",
       body: [
-        "从 Jest 迁移到 Vitest，不要一开始就重写所有测试。第一步应该是让现有测试尽可能跑起来，再逐步处理差异。",
-        "重点检查 transform、module alias、test environment、setupFiles、mock API 和 snapshot 格式。每类差异都应该用小步提交验证。",
+        "模块 mock 的目的不是让测试看起来更容易通过，而是隔离不可控边界。网络请求、第三方 SDK、随机数、时间和浏览器 API 都可能让测试慢、不稳定或难以复现。",
+        "mock 后，测试应该仍然断言业务可见结果，而不是只验证某个内部函数有没有被调用。",
       ],
     },
     {
-      heading: "API 相似但不是完全相同",
+      heading: "vi.mock 的导入时机",
       body: [
-        "describe、it、expect 等基础 API 很接近，很多测试可以直接迁移。mock 相关 API 则需要更认真检查，尤其是 hoist、模块导入时机和自动恢复策略。",
-        "Jest 的全局 API 如果没有显式导入，迁移时可以选择开启 globals，也可以改成从 vitest 导入。长期看，显式导入更清楚。",
+        "Vitest 会提升 vi.mock 调用，所以 mock 通常要写在被测模块 import 之前。这样被测模块在加载依赖时拿到的是 mock 版本。",
+        "如果你需要在不同测试中加载不同模块状态，可以配合 vi.resetModules 和动态 import，但这会增加复杂度，应只在确实需要时使用。",
       ],
     },
     {
-      heading: "迁移策略",
+      heading: "部分 mock",
       body: [
-        "推荐先选择一个测试文件或一个模块做试点，整理出项目内的迁移规则，再批量处理。不要在同一个 PR 里同时改框架、改测试逻辑和改业务代码。",
-        "如果项目里大量使用 jest.mock、jest.spyOn、jest.useFakeTimers，可以先建立迁移对照表，避免逐个文件临时猜写法。",
+        "有时只需要替换模块中的一个函数，其他导出仍然使用真实实现。vi.importActual 可以拿到真实模块，再覆盖需要控制的部分。",
+        "部分 mock 能减少重复实现，也能降低 mock 与真实模块行为偏离的风险。",
       ],
     },
   ],
   examples: [
     {
-      title: "从 Jest 导入改为 Vitest 导入",
-      code: `// before
-import { describe, expect, test, jest } from '@jest/globals'
+      title: "替换 API 模块",
+      code: `import { expect, it, vi } from 'vitest'
+import { loadUserName } from './user-service'
+import { fetchUser } from './api'
 
-// after
-import { describe, expect, test, vi } from 'vitest'
+vi.mock('./api', () => ({
+  // 重点：把外部请求替换成可控 mock 函数
+  fetchUser: vi.fn()
+}))
 
-test('calls the callback', () => {
-  const callback = vi.fn()
+it('returns the loaded user name', async () => {
+  vi.mocked(fetchUser).mockResolvedValue({ id: 'u1', name: 'Ada' })
 
-  callback('done')
-
-  expect(callback).toHaveBeenCalledWith('done')
+  await expect(loadUserName('u1')).resolves.toBe('Ada')
+  expect(fetchUser).toHaveBeenCalledWith('u1')
 })`,
-      focusLines: [5, 8],
+      focusLines: [5, 6, 7, 11, 13, 14],
     },
     {
-      title: "配置兼容的 DOM 测试环境",
-      code: `export default defineConfig({
-  test: {
-    environment: 'jsdom',
-    globals: false,
-    setupFiles: './src/test/setup.ts'
+      title: "保留真实导出，只替换部分函数",
+      code: `import { expect, it, vi } from 'vitest'
+import { buildReceipt } from './receipt'
+import { getExchangeRate } from './currency'
+
+vi.mock('./currency', async () => {
+  const actual = await vi.importActual<typeof import('./currency')>('./currency')
+
+  return {
+    ...actual,
+    // 重点：只替换不稳定的汇率来源，其他工具函数仍用真实实现
+    getExchangeRate: vi.fn(() => 7.2)
   }
+})
+
+it('builds a receipt with mocked exchange rate', () => {
+  const receipt = buildReceipt({ usd: 10 })
+
+  expect(receipt.cny).toBe(72)
+  expect(getExchangeRate).toHaveBeenCalled()
 })`,
-      focusLines: [2, 3, 4],
+      focusLines: [5, 6, 9, 10, 11, 18, 19],
     },
   ],
   recap: [
     {
-      question: "从 Jest 迁移时为什么不建议一次性重写所有测试？",
+      question: "模块 mock 最适合隔离哪些依赖？",
       answer:
-        "一次性重写会混合框架差异和测试逻辑变化，风险高且难回滚。先让现有测试跑起来更稳妥。",
+        "适合隔离网络请求、第三方 SDK、随机数、时间、浏览器 API 和其他慢或不可控的外部边界。",
     },
     {
-      question: "Jest 的 jest.fn 在 Vitest 中通常换成什么？",
+      question: "vi.mock 为什么通常要写在被测模块 import 之前？",
       answer:
-        "通常换成 vi.fn。spy、fake timers 和模块 mock 也大多迁移到 vi 命名空间下。",
+        "因为被测模块加载依赖时需要拿到 mock 版本。Vitest 会提升 vi.mock，但导入关系仍要保持清晰。",
     },
     {
-      question: "globals 配置应该怎么取舍？",
+      question: "vi.importActual 的作用是什么？",
       answer:
-        "开启 globals 可以减少迁移改动；显式从 vitest 导入 API 更清楚，也更利于编辑器和静态分析。",
+        "它可以获取模块真实实现，让你在 mock 中保留大部分真实导出，只替换需要控制的函数。",
     },
     {
-      question: "迁移时第一批应该检查哪些配置？",
+      question: "为什么不要过度断言 mock 调用？",
       answer:
-        "重点检查 transform、module alias、test environment、setupFiles、mock API 和 snapshot 格式。",
+        "过度关注内部调用会让测试绑定实现细节。更好的断言是验证用户可见结果或业务结果，同时对关键边界做必要调用检查。",
     },
     {
-      question: "为什么要先做试点迁移？",
+      question: "什么时候可能需要 vi.resetModules？",
       answer:
-        "试点可以暴露项目内的典型差异，形成迁移规则后再批量处理，能降低重复踩坑和大范围回滚风险。",
+        "当不同测试需要重新加载模块并获得不同初始化状态时可以使用，但它会增加复杂度，应谨慎使用。",
     },
     {
-      question: "mock 相关迁移为什么要更谨慎？",
+      question: "mock 和真实实现偏离会带来什么风险？",
       answer:
-        "mock 受 hoist、模块导入时机和恢复策略影响较大，API 名称相似不代表行为完全一致。",
+        "测试可能通过，但真实环境失败。部分 mock、契约测试和少量集成测试可以降低这种风险。",
     },
   ],
 };

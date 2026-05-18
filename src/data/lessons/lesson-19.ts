@@ -2,90 +2,111 @@ import type { Course } from "../../types/course";
 
 export const lesson19: Course = {
   id: "lesson-19",
-  title: "05. 数据驱动测试",
+  title: "19. 测试可维护性",
   level: "进阶",
-  summary: "使用 test.each 覆盖多组输入输出，让边界用例更集中、更容易维护。",
+  summary: "用清晰命名、测试工厂和行为断言，让测试长期可读、可改、可信任。",
   sections: [
     {
-      heading: "为什么使用表格",
+      heading: "测试也是代码",
       body: [
-        "当同一段业务规则需要验证多组输入输出时，数据驱动测试能减少重复结构，把注意力集中到用例数据本身。",
-        "它特别适合价格计算、权限判断、状态映射、格式化函数和边界值验证。",
+        "测试需要像产品代码一样被维护。命名、结构、重复、边界和抽象层次都会影响后续修改成本。",
+        "可维护测试的目标不是写得最短，而是失败时容易定位，需求变化时容易更新，重构实现时不无故失败。",
       ],
     },
     {
-      heading: "命名要可读",
+      heading: "使用 Arrange Act Assert",
       body: [
-        "表格测试失败时，测试名称应该能直接说明是哪组输入出错。不要只写 works，而要把关键参数放进名称里。",
-        "如果参数超过两三个，使用对象表格通常比数组表格更清晰。",
+        "Arrange 准备数据和依赖，Act 执行被测行为，Assert 验证结果。这个结构能让读者快速判断测试在验证什么。",
+        "如果一个测试里有多次 Act 和多组断言，通常说明它测试了太多行为，可以拆成更小的用例。",
       ],
     },
     {
-      heading: "覆盖边界",
+      heading: "用工厂降低噪音",
       body: [
-        "数据驱动测试不等于把所有可能值都列出来。好的表格应该覆盖正常值、边界值、非法值和业务上特别重要的分支。",
-        "每新增一行数据都应该回答一个问题：它保护了哪条规则，或曾经防止哪类回归。",
+        "测试数据经常有很多与当前断言无关的字段。工厂函数可以提供合理默认值，让每个测试只覆盖自己关心的差异。",
+        "工厂要保持简单，不要把业务规则藏进工厂里。否则测试失败时很难判断问题来自测试数据还是被测代码。",
+      ],
+    },
+    {
+      heading: "避免脆弱断言",
+      body: [
+        "脆弱测试通常断言实现细节，例如内部函数调用顺序、私有状态、样式类名或临时 DOM 结构。实现一重构，测试就大量失败。",
+        "更稳的测试会断言业务行为、可访问角色、可见文本、状态变化和对外输出。",
       ],
     },
   ],
   examples: [
     {
-      title: "用 test.each 覆盖价格边界",
-      code: `import { describe, expect, test } from 'vitest'
-import { calculateDiscount } from './pricing'
+      title: "用工厂准备测试数据",
+      code: `import { expect, it } from 'vitest'
+import { canStartLesson } from './lesson-rules'
 
-describe('calculateDiscount', () => {
-  test.each([
-    // 重点：每一行代表一个明确业务边界
-    { price: 100, coupon: 'NONE', expected: 100 },
-    { price: 100, coupon: 'VIP', expected: 70 },
-    { price: 80, coupon: 'NEW_USER', expected: 60 }
-  ])('coupon $coupon changes $price to $expected', ({ price, coupon, expected }) => {
-    expect(calculateDiscount({ price, coupon })).toBe(expected)
-  })
+function createLesson(overrides = {}) {
+  return {
+    id: 'lesson-01',
+    title: '认识 Vitest',
+    completed: false,
+    locked: false,
+    ...overrides
+  }
+}
+
+it('does not allow starting a locked lesson', () => {
+  const lesson = createLesson({ locked: true })
+
+  // 重点：测试只暴露当前场景关心的字段
+  expect(canStartLesson(lesson)).toBe(false)
 })`,
-      focusLines: [5, 6, 7, 8, 9, 10, 11],
+      focusLines: [4, 5, 10, 15, 17, 18],
     },
     {
-      title: "对象表格让权限测试更清楚",
-      code: `import { expect, test } from 'vitest'
-import { canEditLesson } from './permissions'
+      title: "断言行为，而不是实现细节",
+      code: `import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { expect, it } from 'vitest'
+import { LessonRecap } from './lesson-recap'
 
-test.each([
-  { role: 'owner', completed: false, expected: true },
-  { role: 'member', completed: false, expected: true },
-  { role: 'member', completed: true, expected: false },
-  { role: 'guest', completed: false, expected: false }
-])('$role completed=$completed edit=$expected', (row) => {
-  // 重点：对象字段让断言含义比数组下标更清楚
-  expect(canEditLesson(row)).toBe(row.expected)
+it('marks a lesson as completed from recap', async () => {
+  const user = userEvent.setup()
+  render(<LessonRecap lessonId="lesson-01" />)
+
+  await user.click(screen.getByRole('button', { name: '标记完成' }))
+
+  // 重点：验证用户可见状态，而不是内部 state 名称或 className
+  expect(screen.getByRole('button', { name: '已完成' })).toBeDisabled()
 })`,
-      focusLines: [4, 5, 6, 7, 8, 9, 10, 11],
+      focusLines: [8, 10, 12, 13],
     },
   ],
   recap: [
     {
-      question: "数据驱动测试适合什么场景？",
+      question: "可维护测试最重要的特征是什么？",
       answer:
-        "适合同一规则有多组输入输出的场景，例如计算、格式化、权限、状态映射和边界值验证。",
+        "失败时容易定位问题，需求变化时容易更新，内部实现重构时不会因为无关细节大量失败。",
     },
     {
-      question: "为什么测试名称里要带关键参数？",
-      answer: "失败时可以直接看出是哪组数据出错，减少排查成本。",
+      question: "Arrange Act Assert 分别是什么？",
+      answer: "Arrange 准备数据和依赖，Act 执行被测行为，Assert 验证结果。",
     },
     {
-      question: "数组表格和对象表格如何选择？",
+      question: "什么时候应该拆分测试？",
       answer:
-        "参数少且含义明显时数组表格简洁；参数多或字段含义重要时对象表格更可读。",
+        "当一个测试包含多个行为、多个 Act 或失败后难以判断具体规则时，就应该拆分。",
     },
     {
-      question: "好的表格数据应该覆盖什么？",
+      question: "测试工厂的价值是什么？",
       answer:
-        "应该覆盖正常值、边界值、非法值和关键业务分支，而不是机械枚举所有值。",
+        "提供稳定默认数据，让每个测试只声明自己关心的差异，减少无关字段造成的阅读噪音。",
     },
     {
-      question: "每新增一行测试数据前应该问什么？",
-      answer: "应该问它保护了哪条规则，是否覆盖新的边界或曾经出现过的回归。",
+      question: "测试工厂不应该做什么？",
+      answer:
+        "不应该隐藏复杂业务规则或产生难以预测的数据，否则会让测试原因变得不透明。",
+    },
+    {
+      question: "什么是脆弱断言？",
+      answer:
+        "过度绑定实现细节的断言，例如内部调用顺序、私有状态、临时 className 或不稳定 DOM 结构。",
     },
   ],
 };

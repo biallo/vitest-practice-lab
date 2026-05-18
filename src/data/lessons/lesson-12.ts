@@ -2,95 +2,114 @@ import type { Course } from "../../types/course";
 
 export const lesson12: Course = {
   id: "lesson-12",
-  title: "20. 实战练习",
-  level: "实战",
+  title: "12. 浏览器 API 与持久化",
+  level: "进阶",
   summary:
-    "为一个小型业务模块补齐测试，把安装、断言、异步、mock 和 CI 串起来。",
+    "测试 localStorage、URL、history 和 window API，保证浏览器边界可控且可恢复。",
   sections: [
     {
-      heading: "从纯规则开始",
+      heading: "本地存储",
       body: [
-        "实战练习不要一上来就测整个页面。先找到核心业务规则，把它们抽成纯函数或小模块，用最快、最稳定的单元测试保护起来。",
-        "例如课程学习应用里的完成进度、下一课推荐、是否允许标记完成，都可以先用纯函数测试覆盖。",
+        "localStorage 和 sessionStorage 经常用于主题、登录态、草稿、课程进度等轻量状态。测试它们时要关注读写结果、默认值和异常数据恢复。",
+        "每个用例结束后清理存储非常重要。否则一个测试写入的数据可能影响另一个测试，导致结果依赖运行顺序。",
       ],
     },
     {
-      heading: "再扩展到交互和边界",
+      heading: "URL 与 history",
       body: [
-        "当纯规则稳定后，再测试组件交互：用户点击标记完成后按钮变灰、左侧进度增加、刷新后状态还在。",
-        "涉及 localStorage、网络请求、时间或第三方 SDK 时，再使用 mock 控制边界。这样测试层次清晰，不会所有逻辑都堆在一个组件测试里。",
+        "许多前端状态来自 URL，例如当前课程、筛选条件、分页和 tab。测试这类逻辑时，应直接设置 window.history 或使用路由测试工具准备初始地址。",
+        "断言时优先检查用户可见结果，必要时再检查 URL 是否被正确更新。",
       ],
     },
     {
-      heading: "完成标准",
+      heading: "Mock 浏览器 API",
       body: [
-        "一个功能的测试完成标准不是覆盖所有代码行，而是覆盖核心承诺：用户能完成什么、异常时看到什么、状态如何保存、关键规则是否正确。",
-        "最后把测试命令放进 CI，让每次提交都自动验证。测试只有持续运行，才能真正保护项目。",
+        "有些浏览器 API 在 jsdom 中不存在或实现不完整，例如 ResizeObserver、IntersectionObserver、matchMedia。测试需要这些 API 时，可以提供最小 mock。",
+        "mock 必须在 teardown 中恢复，避免影响其他测试。浏览器 API mock 越接近用例需求越好，不要为了测试实现一整套浏览器。",
       ],
     },
   ],
   examples: [
     {
-      title: "先测试纯函数",
-      code: `export function getProgress(completed: number, total: number) {
-  if (total === 0) return 0
-  return Math.round((completed / total) * 100)
-}
+      title: "测试 localStorage 持久化",
+      code: `import { afterEach, expect, it } from 'vitest'
+import { loadProgress, saveProgress } from './progress-store'
 
-test.each([
-  [0, 12, 0],
-  [3, 12, 25],
-  [12, 12, 100]
-])('completed=%i total=%i', (completed, total, expected) => {
-  expect(getProgress(completed, total)).toBe(expected)
+afterEach(() => {
+  // 重点：持久化状态必须在用例之间清理
+  localStorage.clear()
+})
+
+it('saves and loads completed lessons', () => {
+  saveProgress(['lesson-01', 'lesson-02'])
+
+  expect(loadProgress()).toEqual(['lesson-01', 'lesson-02'])
 })`,
-      focusLines: [1, 6, 11],
+      focusLines: [4, 5, 6, 10, 12],
     },
     {
-      title: "再测试用户交互",
-      code: `it('marks the current lesson as completed', async () => {
-  const user = userEvent.setup()
-  render(<LessonPage initialLessonId="lesson-12" />)
+      title: "测试 URL 驱动的状态",
+      code: `import { expect, it } from 'vitest'
+import { getCurrentLessonFromUrl } from './lesson-url'
 
-  await user.click(screen.getByRole('tab', { name: '复盘' }))
-  await user.click(screen.getByRole('button', { name: '标记完成' }))
+it('reads the current lesson from the query string', () => {
+  window.history.replaceState({}, '', '/?lesson=lesson-12')
 
-  expect(screen.getByRole('button', { name: '已完成' })).toBeDisabled()
-  expect(screen.getByText('1/20')).toBeInTheDocument()
+  // 重点：测试前明确设置 URL，避免依赖运行环境里的默认地址
+  expect(getCurrentLessonFromUrl()).toBe('lesson-12')
 })`,
-      focusLines: [5, 6, 8, 9],
+      focusLines: [5, 7, 8],
+    },
+    {
+      title: "为缺失的浏览器 API 提供最小 mock",
+      code: `import { afterEach, expect, it, vi } from 'vitest'
+import { isDesktop } from './media'
+
+const matchMedia = vi.fn()
+
+afterEach(() => {
+  vi.restoreAllMocks()
+})
+
+it('detects a desktop viewport', () => {
+  vi.stubGlobal('matchMedia', matchMedia)
+  matchMedia.mockReturnValue({ matches: true })
+
+  // 重点：只 mock 当前测试真正需要的返回值
+  expect(isDesktop()).toBe(true)
+})`,
+      focusLines: [4, 6, 11, 12, 14, 15],
     },
   ],
   recap: [
     {
-      question: "实战中为什么先测纯函数？",
+      question: "测试 localStorage 时最容易遗漏什么？",
       answer:
-        "纯函数测试最快、最稳定，能先保护核心规则，再把信心扩展到组件、持久化和网络边界。",
+        "最容易遗漏用例之间的清理，以及默认值、损坏数据和不存在数据时的恢复逻辑。",
     },
     {
-      question: "什么时候应该写组件测试？",
+      question: "URL 驱动状态应该如何准备测试条件？",
       answer:
-        "当你需要验证用户交互、界面状态变化、可访问行为或多个模块协作后的可见结果时。",
+        "可以用 window.history.replaceState 设置初始地址，或使用路由测试工具提供初始路由。",
     },
     {
-      question: "一个功能的测试完成标准是什么？",
+      question: "为什么断言时仍然优先看用户可见结果？",
       answer:
-        "覆盖核心用户承诺和高风险分支，失败信息能定位问题，并且内部重构时测试不需要大改。",
+        "URL 和存储是实现边界，用户可见结果才是业务承诺。必要时再补充 URL 或存储断言。",
     },
     {
-      question: "为什么不要一开始就测试整个页面？",
+      question: "哪些浏览器 API 可能需要手动 mock？",
       answer:
-        "整页测试反馈慢、失败面大。先保护纯规则能更快定位问题，再逐步覆盖交互和边界。",
+        "ResizeObserver、IntersectionObserver、matchMedia、scrollTo、clipboard 等在测试环境中可能缺失或行为不完整。",
     },
     {
-      question: "localStorage、网络和时间这类边界应该怎么测试？",
-      answer:
-        "把边界控制在明确位置，需要时用 mock 或 fake timers 隔离，让测试关注业务结果而不是外部环境。",
+      question: "浏览器 API mock 为什么要恢复？",
+      answer: "全局 API 会影响所有测试文件或后续用例，恢复可以避免跨测试污染。",
     },
     {
-      question: "为什么测试要放进 CI？",
+      question: "mock 浏览器 API 时应该实现到什么程度？",
       answer:
-        "CI 让每次提交都自动验证测试、构建和 lint，保证测试不是只在本地偶尔运行。",
+        "实现到当前测试需要的最小行为即可。过度实现会增加维护成本，也可能制造与真实浏览器不一致的假象。",
     },
   ],
 };

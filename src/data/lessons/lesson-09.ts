@@ -2,80 +2,97 @@ import type { Course } from "../../types/course";
 
 export const lesson09: Course = {
   id: "lesson-09",
-  title: "15. 快照测试",
+  title: "09. 测试环境",
   level: "进阶",
-  summary: "用快照固定复杂输出，同时避免把快照当作万能断言。",
+  summary: "区分 node、jsdom 和 happy-dom，按测试目标选择合适的运行环境。",
   sections: [
     {
-      heading: "快照适合什么",
+      heading: "node 环境",
       body: [
-        "快照适合稳定但结构较大的输出，例如序列化后的配置、错误对象、生成的文档片段或复杂 UI 结构。",
-        "它的优势是快速发现整体输出变化。缺点是变更原因不一定清楚，读者必须认真审查快照 diff。",
+        "node 是 Vitest 的默认测试环境，适合测试纯函数、服务端工具、数据转换、校验规则和不依赖 DOM 的模块。它启动更轻，反馈更快。",
+        "如果测试目标不需要 document、window、HTMLElement，就优先使用 node。测试环境越小，失败原因越集中。",
       ],
     },
     {
-      heading: "不要滥用快照",
+      heading: "jsdom 与 happy-dom",
       body: [
-        "如果一个结果可以用一两个明确 matcher 表达，就不要使用大快照。明确断言比快照更容易告诉你业务承诺是什么。",
-        "巨大的组件快照往往很脆弱，className、属性顺序或无关结构变化都会产生大量 diff，降低团队信任。",
+        "React 组件、DOM 查询、表单交互和浏览器事件通常需要浏览器式环境。jsdom 兼容性更常见，生态文档更多；happy-dom 通常更轻，但遇到复杂 Web API 时需要确认行为是否足够接近真实浏览器。",
+        "选择环境的核心不是哪个更高级，而是测试目标需要哪些 API。环境越贴近目标，测试越有意义。",
       ],
     },
     {
-      heading: "更新快照要像改代码一样审查",
+      heading: "按文件覆盖环境",
       body: [
-        "快照失败不代表一定要更新，也可能是真 bug。更新前先确认输出变化是否符合预期，再提交新的快照。",
-        "快照文件应该进入代码评审。不要把“更新快照”当成清理失败测试的快捷键。",
+        "同一个项目里可以同时存在 node 和 jsdom 测试。全局配置给出默认环境，少数特殊文件可以用注释覆盖。",
+        "这种方式适合混合项目：大部分纯逻辑用 node，组件和 DOM 行为用 jsdom，避免所有测试都付出 DOM 环境成本。",
       ],
     },
   ],
   examples: [
     {
-      title: "内联快照适合小输出",
-      code: `import { expect, it } from 'vitest'
-import { buildConfig } from './buildConfig'
+      title: "为组件测试配置 jsdom",
+      code: `import { defineConfig } from 'vite'
 
-it('builds the default config', () => {
-  expect(buildConfig()).toMatchInlineSnapshot({
-    generatedAt: expect.any(String)
-  }, \`
-{
-  "mode": "test",
-  "retry": 0
-}
-\`)
+export default defineConfig({
+  test: {
+    // 重点：组件测试需要 window、document 和 DOM 事件能力
+    environment: 'jsdom',
+    setupFiles: './src/test/setup.ts'
+  }
 })`,
-      focusLines: [5, 6],
+      focusLines: [4, 5, 6],
     },
     {
-      title: "能明确断言时不要用快照",
-      code: `it('shows completed text', () => {
-  render(<CompletionButton completed />)
+      title: "在单个文件中覆盖测试环境",
+      code: `// @vitest-environment node
+import { expect, it } from 'vitest'
+import { normalizePrice } from './pricing'
 
-  expect(screen.getByRole('button', { name: '已完成' })).toBeDisabled()
+it('normalizes a raw price value', () => {
+  // 重点：纯函数不需要 DOM，用 node 环境更轻
+  expect(normalizePrice('12.50')).toBe(12.5)
 })`,
-      focusLines: [4],
+      focusLines: [1, 6, 7],
+    },
+    {
+      title: "DOM 测试需要浏览器式环境",
+      code: `// @vitest-environment jsdom
+import { expect, it } from 'vitest'
+
+it('reads text from the document', () => {
+  document.body.innerHTML = '<button>保存</button>'
+
+  // 重点：document 只在 jsdom、happy-dom 或真实浏览器环境中可用
+  expect(document.querySelector('button')?.textContent).toBe('保存')
+})`,
+      focusLines: [1, 5, 7, 8],
     },
   ],
   recap: [
     {
-      question: "快照测试最适合什么输出？",
+      question: "node 环境最适合测试什么？",
       answer:
-        "适合稳定但结构较大的输出，例如配置、序列化数据、错误对象或生成内容。",
+        "适合测试纯函数、工具函数、数据转换和不依赖浏览器 API 的业务规则。",
     },
     {
-      question: "为什么巨大 UI 快照容易变成负担？",
+      question: "React 组件测试为什么通常需要 jsdom？",
       answer:
-        "它会因为无关结构变化产生大量 diff，读者难以判断变化是否真的影响用户行为。",
+        "组件渲染、DOM 查询、事件触发和表单交互需要 window、document、HTMLElement 等浏览器式 API。",
     },
     {
-      question: "快照失败后应该直接更新吗？",
+      question: "happy-dom 和 jsdom 应该如何选择？",
       answer:
-        "不应该。先确认输出变化是否符合预期，排除 bug 后再更新并审查快照 diff。",
+        "优先看项目依赖的 Web API。jsdom 文档和生态更常见，happy-dom 更轻；复杂行为需要用测试验证兼容性。",
     },
     {
-      question: "什么时候明确 matcher 比快照更好？",
+      question: "为什么不建议所有测试都默认用 DOM 环境？",
       answer:
-        "当结果可以用少量断言表达时，明确 matcher 更能体现业务承诺，也更容易定位失败原因。",
+        "DOM 环境成本更高，也可能掩盖纯逻辑测试的边界。能用 node 的测试保持 node 会更快、更清晰。",
+    },
+    {
+      question: "单个测试文件如何覆盖环境？",
+      answer:
+        "可以在文件顶部使用 @vitest-environment 注释，例如 node、jsdom 或 happy-dom。",
     },
   ],
 };

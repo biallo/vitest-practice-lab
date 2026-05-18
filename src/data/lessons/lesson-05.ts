@@ -2,90 +2,90 @@ import type { Course } from "../../types/course";
 
 export const lesson05: Course = {
   id: "lesson-05",
-  title: "06. 测试异步代码",
-  level: "基础",
-  summary: "测试 Promise、async/await、错误分支与等待时机。",
+  title: "05. 数据驱动测试",
+  level: "进阶",
+  summary: "使用 test.each 覆盖多组输入输出，让边界用例更集中、更容易维护。",
   sections: [
     {
-      heading: "异步测试必须等待结果",
+      heading: "为什么使用表格",
       body: [
-        "异步测试最常见的问题是测试函数已经结束，但异步断言还没有执行。Vitest 只有在你 return Promise 或使用 async/await 时，才知道应该等待。",
-        "凡是依赖异步结果的断言，都应该出现在 await 之后，或者使用 await expect(promise).resolves/rejects。",
+        "当同一段业务规则需要验证多组输入输出时，数据驱动测试能减少重复结构，把注意力集中到用例数据本身。",
+        "它特别适合价格计算、权限判断、状态映射、格式化函数和边界值验证。",
       ],
     },
     {
-      heading: "错误路径和成功路径一样重要",
+      heading: "命名要可读",
       body: [
-        "网络失败、权限不足、空数据和超时都是用户真实会遇到的情况。只测试 happy path 会让代码在异常路径上没有保护。",
-        "测试错误路径时，断言应该落在业务响应上，例如返回默认值、抛出明确错误、展示错误消息，而不是仅仅确认 catch 被执行。",
+        "表格测试失败时，测试名称应该能直接说明是哪组输入出错。不要只写 works，而要把关键参数放进名称里。",
+        "如果参数超过两三个，使用对象表格通常比数组表格更清晰。",
       ],
     },
     {
-      heading: "控制时间和重试",
+      heading: "覆盖边界",
       body: [
-        "涉及 setTimeout、重试、轮询或 debounce 的逻辑，不应该让测试真实等待几秒钟。Vitest 提供 fake timers 来控制时间推进。",
-        "使用 fake timers 时，要在每个测试后恢复真实定时器，避免影响同文件后续测试。",
+        "数据驱动测试不等于把所有可能值都列出来。好的表格应该覆盖正常值、边界值、非法值和业务上特别重要的分支。",
+        "每新增一行数据都应该回答一个问题：它保护了哪条规则，或曾经防止哪类回归。",
       ],
     },
   ],
   examples: [
     {
-      title: "等待 Promise 结果",
-      code: `import { expect, it } from 'vitest'
-import { loadLesson } from './loadLesson'
+      title: "用 test.each 覆盖价格边界",
+      code: `import { describe, expect, test } from 'vitest'
+import { calculateDiscount } from './pricing'
 
-it('loads lesson details', async () => {
-  const lesson = await loadLesson('lesson-01')
-
-  expect(lesson.title).toBe('认识 Vitest')
-  expect(lesson.completed).toBe(false)
+describe('calculateDiscount', () => {
+  test.each([
+    // 重点：每一行代表一个明确业务边界
+    { price: 100, coupon: 'NONE', expected: 100 },
+    { price: 100, coupon: 'VIP', expected: 70 },
+    { price: 80, coupon: 'NEW_USER', expected: 60 }
+  ])('coupon $coupon changes $price to $expected', ({ price, coupon, expected }) => {
+    expect(calculateDiscount({ price, coupon })).toBe(expected)
+  })
 })`,
-      focusLines: [4, 5, 7],
+      focusLines: [5, 6, 7, 8, 9, 10, 11],
     },
     {
-      title: "用 fake timers 测试延迟逻辑",
-      code: `import { afterEach, expect, it, vi } from 'vitest'
+      title: "对象表格让权限测试更清楚",
+      code: `import { expect, test } from 'vitest'
+import { canEditLesson } from './permissions'
 
-afterEach(() => {
-  vi.useRealTimers()
-})
-
-it('marks a save operation as timed out', async () => {
-  vi.useFakeTimers()
-  const promise = saveWithTimeout()
-
-  await vi.advanceTimersByTimeAsync(5000)
-
-  await expect(promise).rejects.toThrow('save timed out')
+test.each([
+  { role: 'owner', completed: false, expected: true },
+  { role: 'member', completed: false, expected: true },
+  { role: 'member', completed: true, expected: false },
+  { role: 'guest', completed: false, expected: false }
+])('$role completed=$completed edit=$expected', (row) => {
+  // 重点：对象字段让断言含义比数组下标更清楚
+  expect(canEditLesson(row)).toBe(row.expected)
 })`,
-      focusLines: [8, 11, 13],
+      focusLines: [4, 5, 6, 7, 8, 9, 10, 11],
     },
   ],
   recap: [
     {
-      question: "为什么异步测试函数通常要写成 async？",
+      question: "数据驱动测试适合什么场景？",
       answer:
-        "这样可以用 await 等待异步结果，Vitest 也能知道测试应该等 Promise 完成后再判断通过或失败。",
+        "适合同一规则有多组输入输出的场景，例如计算、格式化、权限、状态映射和边界值验证。",
     },
     {
-      question: "测试 rejects 时为什么要加 await？",
-      answer:
-        "rejects 返回的是一个异步断言 Promise，不 await 的话测试可能提前结束，失败不会被正确捕获。",
+      question: "为什么测试名称里要带关键参数？",
+      answer: "失败时可以直接看出是哪组数据出错，减少排查成本。",
     },
     {
-      question: "fake timers 用完后为什么要恢复？",
+      question: "数组表格和对象表格如何选择？",
       answer:
-        "fake timers 会改变当前测试环境的定时器行为，不恢复会污染后续测试，造成难以定位的失败。",
+        "参数少且含义明显时数组表格简洁；参数多或字段含义重要时对象表格更可读。",
     },
     {
-      question: "异步错误路径为什么要像成功路径一样测试？",
+      question: "好的表格数据应该覆盖什么？",
       answer:
-        "网络失败、超时、空数据等异常路径是用户真实会遇到的情况，只测成功路径无法保护这些行为。",
+        "应该覆盖正常值、边界值、非法值和关键业务分支，而不是机械枚举所有值。",
     },
     {
-      question: "什么时候不应该用真实 sleep 等待？",
-      answer:
-        "涉及定时器、重试、轮询或 debounce 时，真实等待会让测试变慢且不稳定，应该用 fake timers 控制时间。",
+      question: "每新增一行测试数据前应该问什么？",
+      answer: "应该问它保护了哪条规则，是否覆盖新的边界或曾经出现过的回归。",
     },
   ],
 };

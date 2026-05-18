@@ -2,97 +2,103 @@ import type { Course } from "../../types/course";
 
 export const lesson14: Course = {
   id: "lesson-14",
-  title: "09. 测试环境",
+  title: "14. 测试 React Hook",
   level: "进阶",
-  summary: "区分 node、jsdom 和 happy-dom，按测试目标选择合适的运行环境。",
+  summary: "通过组件或 renderHook 验证自定义 Hook 的状态、事件和异步行为。",
   sections: [
     {
-      heading: "node 环境",
+      heading: "优先通过使用场景测试",
       body: [
-        "node 是 Vitest 的默认测试环境，适合测试纯函数、服务端工具、数据转换、校验规则和不依赖 DOM 的模块。它启动更轻，反馈更快。",
-        "如果测试目标不需要 document、window、HTMLElement，就优先使用 node。测试环境越小，失败原因越集中。",
+        "自定义 Hook 本质上是组件逻辑。只要 Hook 的行为最终体现在界面上，优先通过组件测试验证用户能看到和操作的结果。",
+        "直接测试 Hook 适合纯逻辑 Hook、复用复杂状态机、或组件外壳会让测试噪音过大的场景。",
       ],
     },
     {
-      heading: "jsdom 与 happy-dom",
+      heading: "renderHook 的价值",
       body: [
-        "React 组件、DOM 查询、表单交互和浏览器事件通常需要浏览器式环境。jsdom 兼容性更常见，生态文档更多；happy-dom 通常更轻，但遇到复杂 Web API 时需要确认行为是否足够接近真实浏览器。",
-        "选择环境的核心不是哪个更高级，而是测试目标需要哪些 API。环境越贴近目标，测试越有意义。",
+        "renderHook 可以在测试中运行 Hook，并通过 result.current 读取当前状态。触发会改变状态的函数时，需要用 act 包住。",
+        "它适合测试 useCounter、usePagination、useLocalStorage 这类状态逻辑清晰的 Hook。",
       ],
     },
     {
-      heading: "按文件覆盖环境",
+      heading: "异步 Hook",
       body: [
-        "同一个项目里可以同时存在 node 和 jsdom 测试。全局配置给出默认环境，少数特殊文件可以用注释覆盖。",
-        "这种方式适合混合项目：大部分纯逻辑用 node，组件和 DOM 行为用 jsdom，避免所有测试都付出 DOM 环境成本。",
+        "异步 Hook 经常涉及 loading、success、error 三种状态。测试时要先断言初始状态，再用 waitFor 等待状态稳定。",
+        "不要用固定延迟等待异步完成。固定等待会让测试慢且不稳定，应该等待某个明确的状态或 UI 结果。",
       ],
     },
   ],
   examples: [
     {
-      title: "为组件测试配置 jsdom",
-      code: `import { defineConfig } from 'vite'
+      title: "测试同步状态 Hook",
+      code: `import { act, renderHook } from '@testing-library/react'
+import { expect, it } from 'vitest'
+import { useCounter } from './use-counter'
 
-export default defineConfig({
-  test: {
-    // 重点：组件测试需要 window、document 和 DOM 事件能力
-    environment: 'jsdom',
-    setupFiles: './src/test/setup.ts'
-  }
+it('increments the counter', () => {
+  const { result } = renderHook(() => useCounter(0))
+
+  act(() => {
+    // 重点：触发 React 状态更新的操作要放进 act
+    result.current.increment()
+  })
+
+  expect(result.current.count).toBe(1)
 })`,
-      focusLines: [4, 5, 6],
+      focusLines: [6, 8, 9, 10, 13],
     },
     {
-      title: "在单个文件中覆盖测试环境",
-      code: `// @vitest-environment node
-import { expect, it } from 'vitest'
-import { normalizePrice } from './pricing'
+      title: "测试异步 Hook 状态",
+      code: `import { renderHook, waitFor } from '@testing-library/react'
+import { expect, it, vi } from 'vitest'
+import { useUser } from './use-user'
+import { fetchUser } from './api'
 
-it('normalizes a raw price value', () => {
-  // 重点：纯函数不需要 DOM，用 node 环境更轻
-  expect(normalizePrice('12.50')).toBe(12.5)
+vi.mock('./api', () => ({
+  fetchUser: vi.fn()
+}))
+
+it('loads user data', async () => {
+  vi.mocked(fetchUser).mockResolvedValue({ id: 'u1', name: 'Ada' })
+
+  const { result } = renderHook(() => useUser('u1'))
+
+  expect(result.current.status).toBe('loading')
+
+  await waitFor(() => {
+    // 重点：等待明确状态，而不是等待固定毫秒数
+    expect(result.current.status).toBe('success')
+  })
+  expect(result.current.user?.name).toBe('Ada')
 })`,
-      focusLines: [1, 6, 7],
-    },
-    {
-      title: "DOM 测试需要浏览器式环境",
-      code: `// @vitest-environment jsdom
-import { expect, it } from 'vitest'
-
-it('reads text from the document', () => {
-  document.body.innerHTML = '<button>保存</button>'
-
-  // 重点：document 只在 jsdom、happy-dom 或真实浏览器环境中可用
-  expect(document.querySelector('button')?.textContent).toBe('保存')
-})`,
-      focusLines: [1, 5, 7, 8],
+      focusLines: [11, 13, 15, 17, 18, 19, 21],
     },
   ],
   recap: [
     {
-      question: "node 环境最适合测试什么？",
+      question: "什么时候应该通过组件测试 Hook？",
       answer:
-        "适合测试纯函数、工具函数、数据转换和不依赖浏览器 API 的业务规则。",
+        "当 Hook 行为最终体现在界面或用户交互上时，优先通过组件测试，因为它更接近真实使用方式。",
     },
     {
-      question: "React 组件测试为什么通常需要 jsdom？",
+      question: "renderHook 适合什么场景？",
       answer:
-        "组件渲染、DOM 查询、事件触发和表单交互需要 window、document、HTMLElement 等浏览器式 API。",
+        "适合测试纯状态逻辑、自定义复用逻辑、分页、表单状态、本地存储封装等组件外壳噪音较大的 Hook。",
     },
     {
-      question: "happy-dom 和 jsdom 应该如何选择？",
+      question: "为什么状态更新要放进 act？",
       answer:
-        "优先看项目依赖的 Web API。jsdom 文档和生态更常见，happy-dom 更轻；复杂行为需要用测试验证兼容性。",
+        "act 会告诉 React 测试正在执行一次状态更新，让渲染和副作用完成后再进行断言。",
     },
     {
-      question: "为什么不建议所有测试都默认用 DOM 环境？",
+      question: "异步 Hook 测试为什么不推荐固定等待？",
       answer:
-        "DOM 环境成本更高，也可能掩盖纯逻辑测试的边界。能用 node 的测试保持 node 会更快、更清晰。",
+        "固定等待会让测试慢且不稳定。waitFor 等待明确状态更快，也更能表达测试意图。",
     },
     {
-      question: "单个测试文件如何覆盖环境？",
+      question: "异步 Hook 通常应该覆盖哪些状态？",
       answer:
-        "可以在文件顶部使用 @vitest-environment 注释，例如 node、jsdom 或 happy-dom。",
+        "至少覆盖 loading、success 和 error。复杂场景还应覆盖取消请求、参数变化和重复请求。",
     },
   ],
 };

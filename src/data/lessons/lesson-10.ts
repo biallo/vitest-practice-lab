@@ -2,86 +2,96 @@ import type { Course } from "../../types/course";
 
 export const lesson10: Course = {
   id: "lesson-10",
-  title: "17. CI 与报告",
-  level: "工程化",
-  summary: "在 GitHub Actions 中运行测试，输出稳定日志并保留诊断信息。",
+  title: "10. Mock 函数",
+  level: "进阶",
+  summary: "使用 vi.fn、vi.spyOn 和模块 mock 隔离依赖。",
   sections: [
     {
-      heading: "CI 的目标是稳定反馈",
+      heading: "Mock 的目标是控制边界",
       body: [
-        "CI 中的测试应该可重复、可结束、日志足够清楚。它不是本地 watch 模式的替代品，而是每次提交后的质量闸门。",
-        "Node 版本、包管理器、时区、环境变量和操作系统都可能让 CI 与本地表现不同。把这些条件写进 workflow，才能减少随机失败。",
+        "Mock 不是为了让测试“看起来通过”，而是为了控制当前测试不关心的边界，例如网络、时间、随机数、日志或第三方 SDK。",
+        "能用真实纯函数完成的测试，不要急着 mock。过度 mock 会让测试绑定实现细节，降低重构自由度。",
       ],
     },
     {
-      heading: "使用 npm ci 和锁文件",
+      heading: "vi.fn 与 vi.spyOn",
       body: [
-        "CI 中推荐使用 npm ci，它会严格按 package-lock.json 安装依赖，并在 lockfile 与 package.json 不一致时报错。",
-        "依赖缓存应该缓存包管理器缓存，而不是缓存 node_modules。node_modules 缓存容易掩盖安装问题。",
+        "vi.fn 创建一个可记录调用的新函数，适合作为回调、依赖注入或替身实现。你可以断言它被调用的次数、参数和返回值。",
+        "vi.spyOn 观察对象上已有的方法，适合临时替换 console、Date、storage 或服务对象方法。用完要 restore，避免污染其它测试。",
       ],
     },
     {
-      heading: "报告与排查",
+      heading: "模块 mock",
       body: [
-        "失败日志要让读者能快速看到哪个文件、哪个测试、哪个断言失败。必要时可以增加 reporter、coverage 或上传 artifact。",
-        "如果某些测试只在 CI 失败，优先检查并发、时区、未声明环境变量、文件系统大小写和真实网络依赖。",
+        "模块 mock 用来替换整个导入模块，适合隔离网络层、持久化层或大型依赖。Vitest 的 vi.mock 会影响导入时拿到的模块实现。",
+        "模块 mock 最好放在文件顶部，并保持替身尽量小。只 mock 当前测试真正需要控制的 API。",
       ],
     },
   ],
   examples: [
     {
-      title: "GitHub Actions 中运行 Vitest",
-      code: `name: Test
+      title: "用 vi.fn 验证回调",
+      code: `import { expect, it, vi } from 'vitest'
+import { completeLesson } from './completeLesson'
 
-on: [push, pull_request]
+it('notifies when a lesson is completed', () => {
+  const onComplete = vi.fn()
 
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: npm
-      - run: npm ci
-      - run: npm run test:run`,
-      focusLines: [12, 14, 15],
+  completeLesson('lesson-10', onComplete)
+
+  expect(onComplete).toHaveBeenCalledTimes(1)
+  expect(onComplete).toHaveBeenCalledWith('lesson-10')
+})`,
+      focusLines: [5, 9, 10],
     },
     {
-      title: "本地复现 CI 命令",
-      code: `npm ci
-npm run lint
-npm run test:run
-npm run build`,
-      focusLines: [3, 4],
+      title: "用 spy 临时替换方法",
+      code: `import { afterEach, expect, it, vi } from 'vitest'
+
+afterEach(() => {
+  vi.restoreAllMocks()
+})
+
+it('writes a warning for duplicate lessons', () => {
+  const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+  addLesson({ id: 'lesson-10' })
+
+  expect(warn).toHaveBeenCalledWith('lesson already exists')
+})`,
+      focusLines: [4, 8, 12],
     },
   ],
   recap: [
     {
-      question: "为什么 CI 推荐 npm ci？",
+      question: "vi.fn 适合什么场景？",
       answer:
-        "npm ci 会严格按照 lockfile 安装依赖，保证 CI 环境可复现，并能及时发现锁文件不一致。",
+        "适合创建一个新的可观察函数，例如回调、依赖注入函数或简单替身，并断言调用次数和参数。",
     },
     {
-      question: "CI 中为什么应该运行 test:run 而不是 test？",
+      question: "vi.spyOn 和 vi.fn 的区别是什么？",
       answer:
-        "test:run 是一次性运行，会自然结束；test 常用于 watch 模式，可能让 CI 一直等待。",
+        "vi.spyOn 作用在已有对象方法上，可以观察或替换原方法；vi.fn 是直接创建一个新的 mock 函数。",
     },
     {
-      question: "CI 偶发失败常见原因有哪些？",
+      question: "为什么 spy 或 mock 用完要恢复？",
       answer:
-        "并发竞争、时区差异、环境变量缺失、文件系统大小写、真实网络依赖和本地未提交文件。",
+        "它们可能改变全局对象或共享模块的行为，不恢复会污染后续测试，让失败变得随机。",
     },
     {
-      question: "为什么不建议缓存 node_modules？",
+      question: "Mock 的目标是什么？",
       answer:
-        "node_modules 缓存可能掩盖安装问题。更稳妥的是缓存包管理器缓存，再用 npm ci 重建依赖。",
+        "Mock 的目标是控制当前测试不关心的边界，例如网络、时间、随机数、日志或第三方 SDK。",
     },
     {
-      question: "失败日志和 artifact 的价值是什么？",
+      question: "为什么过度 mock 会降低测试价值？",
       answer:
-        "它们能帮助回看失败现场，快速定位哪个测试、断言、覆盖率或截图暴露了问题。",
+        "过度 mock 会让测试绑定实现细节，代码重构时即使用户行为没变，测试也可能大量失败。",
+    },
+    {
+      question: "模块 mock 最好保持什么原则？",
+      answer:
+        "尽量放在文件顶部，只替换当前测试真正需要控制的 API，并让替身实现保持小而清楚。",
     },
   ],
 };

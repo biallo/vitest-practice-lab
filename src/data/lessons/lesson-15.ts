@@ -2,107 +2,80 @@ import type { Course } from "../../types/course";
 
 export const lesson15: Course = {
   id: "lesson-15",
-  title: "07. Setup 与 Teardown",
+  title: "15. 快照测试",
   level: "进阶",
-  summary:
-    "掌握 beforeEach、afterEach、beforeAll 和 afterAll，让测试准备和清理可预测。",
+  summary: "用快照固定复杂输出，同时避免把快照当作万能断言。",
   sections: [
     {
-      heading: "生命周期的作用",
+      heading: "快照适合什么",
       body: [
-        "setup 是测试前准备，teardown 是测试后清理。它们的目标不是减少几行代码，而是保证每个测试都在可预测的状态下运行。",
-        "beforeEach 和 afterEach 适合处理每个用例都要重置的状态，例如 mock、localStorage、DOM 和 fake timers。",
+        "快照适合稳定但结构较大的输出，例如序列化后的配置、错误对象、生成的文档片段或复杂 UI 结构。",
+        "它的优势是快速发现整体输出变化。缺点是变更原因不一定清楚，读者必须认真审查快照 diff。",
       ],
     },
     {
-      heading: "一次性资源",
+      heading: "不要滥用快照",
       body: [
-        "beforeAll 和 afterAll 适合昂贵的一次性资源，例如启动测试服务器、建立数据库连接或准备全局 fixture。",
-        "只要资源会被测试修改，就要小心共享状态。共享资源能提升速度，但也更容易让测试互相影响。",
+        "如果一个结果可以用一两个明确 matcher 表达，就不要使用大快照。明确断言比快照更容易告诉你业务承诺是什么。",
+        "巨大的组件快照往往很脆弱，className、属性顺序或无关结构变化都会产生大量 diff，降低团队信任。",
       ],
     },
     {
-      heading: "清理优先于补救",
+      heading: "更新快照要像改代码一样审查",
       body: [
-        "好的 teardown 会让测试失败后仍然能恢复环境。不要依赖测试顺序，也不要让某个测试的残留状态成为下个测试的隐式前提。",
-        "如果测试偶尔失败，第一时间检查是否有未清理的 mock、计时器、DOM、网络拦截或本地存储。",
+        "快照失败不代表一定要更新，也可能是真 bug。更新前先确认输出变化是否符合预期，再提交新的快照。",
+        "快照文件应该进入代码评审。不要把“更新快照”当成清理失败测试的快捷键。",
       ],
     },
   ],
   examples: [
     {
-      title: "每个用例前后保持干净状态",
-      code: `import { afterEach, beforeEach, expect, it, vi } from 'vitest'
+      title: "内联快照适合小输出",
+      code: `import { expect, it } from 'vitest'
+import { buildConfig } from './buildConfig'
 
-beforeEach(() => {
-  vi.useFakeTimers()
-  localStorage.setItem('theme', 'light')
-})
-
-afterEach(() => {
-  // 重点：先恢复计时器，再清理 mock 和持久化状态
-  vi.useRealTimers()
-  vi.restoreAllMocks()
-  localStorage.clear()
-})
-
-it('saves the selected theme', () => {
-  localStorage.setItem('theme', 'dark')
-
-  expect(localStorage.getItem('theme')).toBe('dark')
+it('builds the default config', () => {
+  expect(buildConfig()).toMatchInlineSnapshot({
+    generatedAt: expect.any(String)
+  }, \`
+{
+  "mode": "test",
+  "retry": 0
+}
+\`)
 })`,
-      focusLines: [3, 8, 9, 10, 11, 12],
+      focusLines: [5, 6],
     },
     {
-      title: "一次性准备和释放资源",
-      code: `import { afterAll, beforeAll, expect, it } from 'vitest'
-import { createTestServer } from './test-server'
+      title: "能明确断言时不要用快照",
+      code: `it('shows completed text', () => {
+  render(<CompletionButton completed />)
 
-let server: Awaited<ReturnType<typeof createTestServer>>
-
-beforeAll(async () => {
-  // 重点：昂贵资源只启动一次，减少重复成本
-  server = await createTestServer()
-})
-
-afterAll(async () => {
-  // 重点：释放资源，避免 CI 进程无法正常退出
-  await server.close()
-})
-
-it('responds with a health status', async () => {
-  const response = await server.get('/health')
-
-  expect(response.status).toBe(200)
+  expect(screen.getByRole('button', { name: '已完成' })).toBeDisabled()
 })`,
-      focusLines: [6, 7, 11, 12, 13],
+      focusLines: [4],
     },
   ],
   recap: [
     {
-      question: "beforeEach 和 beforeAll 的核心区别是什么？",
+      question: "快照测试最适合什么输出？",
       answer:
-        "beforeEach 会在每个用例前运行，适合重置状态；beforeAll 只在当前作用域所有用例前运行一次，适合昂贵的一次性资源。",
+        "适合稳定但结构较大的输出，例如配置、序列化数据、错误对象或生成内容。",
     },
     {
-      question: "afterEach 通常应该清理哪些内容？",
+      question: "为什么巨大 UI 快照容易变成负担？",
       answer:
-        "通常清理 mock、fake timers、DOM、localStorage、网络拦截和其他会影响后续测试的全局状态。",
+        "它会因为无关结构变化产生大量 diff，读者难以判断变化是否真的影响用户行为。",
     },
     {
-      question: "为什么共享资源有风险？",
+      question: "快照失败后应该直接更新吗？",
       answer:
-        "共享资源可能被某个测试修改，导致后续测试依赖隐式状态，从而出现顺序相关或偶发失败。",
+        "不应该。先确认输出变化是否符合预期，排除 bug 后再更新并审查快照 diff。",
     },
     {
-      question: "测试偶发失败时，优先检查什么？",
+      question: "什么时候明确 matcher 比快照更好？",
       answer:
-        "优先检查未恢复的 mock、计时器、异步任务、DOM、存储和网络拦截，因为它们最容易跨测试污染。",
-    },
-    {
-      question: "teardown 为什么要在测试失败时也能工作？",
-      answer:
-        "测试失败不应该破坏后续测试环境。可靠的 teardown 能让失败局部化，避免一个错误拖垮整组用例。",
+        "当结果可以用少量断言表达时，明确 matcher 更能体现业务承诺，也更容易定位失败原因。",
     },
   ],
 };

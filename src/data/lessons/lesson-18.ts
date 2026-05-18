@@ -2,114 +2,92 @@ import type { Course } from "../../types/course";
 
 export const lesson18: Course = {
   id: "lesson-18",
-  title: "12. 浏览器 API 与持久化",
-  level: "进阶",
-  summary:
-    "测试 localStorage、URL、history 和 window API，保证浏览器边界可控且可恢复。",
+  title: "18. 从 Jest 迁移",
+  level: "迁移",
+  summary: "比较 Jest 与 Vitest API、配置和迁移策略，降低迁移风险。",
   sections: [
     {
-      heading: "本地存储",
+      heading: "先迁移运行环境",
       body: [
-        "localStorage 和 sessionStorage 经常用于主题、登录态、草稿、课程进度等轻量状态。测试它们时要关注读写结果、默认值和异常数据恢复。",
-        "每个用例结束后清理存储非常重要。否则一个测试写入的数据可能影响另一个测试，导致结果依赖运行顺序。",
+        "从 Jest 迁移到 Vitest，不要一开始就重写所有测试。第一步应该是让现有测试尽可能跑起来，再逐步处理差异。",
+        "重点检查 transform、module alias、test environment、setupFiles、mock API 和 snapshot 格式。每类差异都应该用小步提交验证。",
       ],
     },
     {
-      heading: "URL 与 history",
+      heading: "API 相似但不是完全相同",
       body: [
-        "许多前端状态来自 URL，例如当前课程、筛选条件、分页和 tab。测试这类逻辑时，应直接设置 window.history 或使用路由测试工具准备初始地址。",
-        "断言时优先检查用户可见结果，必要时再检查 URL 是否被正确更新。",
+        "describe、it、expect 等基础 API 很接近，很多测试可以直接迁移。mock 相关 API 则需要更认真检查，尤其是 hoist、模块导入时机和自动恢复策略。",
+        "Jest 的全局 API 如果没有显式导入，迁移时可以选择开启 globals，也可以改成从 vitest 导入。长期看，显式导入更清楚。",
       ],
     },
     {
-      heading: "Mock 浏览器 API",
+      heading: "迁移策略",
       body: [
-        "有些浏览器 API 在 jsdom 中不存在或实现不完整，例如 ResizeObserver、IntersectionObserver、matchMedia。测试需要这些 API 时，可以提供最小 mock。",
-        "mock 必须在 teardown 中恢复，避免影响其他测试。浏览器 API mock 越接近用例需求越好，不要为了测试实现一整套浏览器。",
+        "推荐先选择一个测试文件或一个模块做试点，整理出项目内的迁移规则，再批量处理。不要在同一个 PR 里同时改框架、改测试逻辑和改业务代码。",
+        "如果项目里大量使用 jest.mock、jest.spyOn、jest.useFakeTimers，可以先建立迁移对照表，避免逐个文件临时猜写法。",
       ],
     },
   ],
   examples: [
     {
-      title: "测试 localStorage 持久化",
-      code: `import { afterEach, expect, it } from 'vitest'
-import { loadProgress, saveProgress } from './progress-store'
+      title: "从 Jest 导入改为 Vitest 导入",
+      code: `// before
+import { describe, expect, test, jest } from '@jest/globals'
 
-afterEach(() => {
-  // 重点：持久化状态必须在用例之间清理
-  localStorage.clear()
-})
+// after
+import { describe, expect, test, vi } from 'vitest'
 
-it('saves and loads completed lessons', () => {
-  saveProgress(['lesson-01', 'lesson-02'])
+test('calls the callback', () => {
+  const callback = vi.fn()
 
-  expect(loadProgress()).toEqual(['lesson-01', 'lesson-02'])
+  callback('done')
+
+  expect(callback).toHaveBeenCalledWith('done')
 })`,
-      focusLines: [4, 5, 6, 10, 12],
+      focusLines: [5, 8],
     },
     {
-      title: "测试 URL 驱动的状态",
-      code: `import { expect, it } from 'vitest'
-import { getCurrentLessonFromUrl } from './lesson-url'
-
-it('reads the current lesson from the query string', () => {
-  window.history.replaceState({}, '', '/?lesson=lesson-08')
-
-  // 重点：测试前明确设置 URL，避免依赖运行环境里的默认地址
-  expect(getCurrentLessonFromUrl()).toBe('lesson-08')
+      title: "配置兼容的 DOM 测试环境",
+      code: `export default defineConfig({
+  test: {
+    environment: 'jsdom',
+    globals: false,
+    setupFiles: './src/test/setup.ts'
+  }
 })`,
-      focusLines: [5, 7, 8],
-    },
-    {
-      title: "为缺失的浏览器 API 提供最小 mock",
-      code: `import { afterEach, expect, it, vi } from 'vitest'
-import { isDesktop } from './media'
-
-const matchMedia = vi.fn()
-
-afterEach(() => {
-  vi.restoreAllMocks()
-})
-
-it('detects a desktop viewport', () => {
-  vi.stubGlobal('matchMedia', matchMedia)
-  matchMedia.mockReturnValue({ matches: true })
-
-  // 重点：只 mock 当前测试真正需要的返回值
-  expect(isDesktop()).toBe(true)
-})`,
-      focusLines: [4, 6, 11, 12, 14, 15],
+      focusLines: [2, 3, 4],
     },
   ],
   recap: [
     {
-      question: "测试 localStorage 时最容易遗漏什么？",
+      question: "从 Jest 迁移时为什么不建议一次性重写所有测试？",
       answer:
-        "最容易遗漏用例之间的清理，以及默认值、损坏数据和不存在数据时的恢复逻辑。",
+        "一次性重写会混合框架差异和测试逻辑变化，风险高且难回滚。先让现有测试跑起来更稳妥。",
     },
     {
-      question: "URL 驱动状态应该如何准备测试条件？",
+      question: "Jest 的 jest.fn 在 Vitest 中通常换成什么？",
       answer:
-        "可以用 window.history.replaceState 设置初始地址，或使用路由测试工具提供初始路由。",
+        "通常换成 vi.fn。spy、fake timers 和模块 mock 也大多迁移到 vi 命名空间下。",
     },
     {
-      question: "为什么断言时仍然优先看用户可见结果？",
+      question: "globals 配置应该怎么取舍？",
       answer:
-        "URL 和存储是实现边界，用户可见结果才是业务承诺。必要时再补充 URL 或存储断言。",
+        "开启 globals 可以减少迁移改动；显式从 vitest 导入 API 更清楚，也更利于编辑器和静态分析。",
     },
     {
-      question: "哪些浏览器 API 可能需要手动 mock？",
+      question: "迁移时第一批应该检查哪些配置？",
       answer:
-        "ResizeObserver、IntersectionObserver、matchMedia、scrollTo、clipboard 等在测试环境中可能缺失或行为不完整。",
+        "重点检查 transform、module alias、test environment、setupFiles、mock API 和 snapshot 格式。",
     },
     {
-      question: "浏览器 API mock 为什么要恢复？",
-      answer: "全局 API 会影响所有测试文件或后续用例，恢复可以避免跨测试污染。",
+      question: "为什么要先做试点迁移？",
+      answer:
+        "试点可以暴露项目内的典型差异，形成迁移规则后再批量处理，能降低重复踩坑和大范围回滚风险。",
     },
     {
-      question: "mock 浏览器 API 时应该实现到什么程度？",
+      question: "mock 相关迁移为什么要更谨慎？",
       answer:
-        "实现到当前测试需要的最小行为即可。过度实现会增加维护成本，也可能制造与真实浏览器不一致的假象。",
+        "mock 受 hoist、模块导入时机和恢复策略影响较大，API 名称相似不代表行为完全一致。",
     },
   ],
 };

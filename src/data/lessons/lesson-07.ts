@@ -2,90 +2,107 @@ import type { Course } from "../../types/course";
 
 export const lesson07: Course = {
   id: "lesson-07",
-  title: "13. React 组件测试",
+  title: "07. Setup 与 Teardown",
   level: "进阶",
-  summary: "结合 Testing Library 测试组件行为，而不是测试实现细节。",
+  summary:
+    "掌握 beforeEach、afterEach、beforeAll 和 afterAll，让测试准备和清理可预测。",
   sections: [
     {
-      heading: "组件测试关注用户行为",
+      heading: "生命周期的作用",
       body: [
-        "React 组件测试应该尽量从用户能看到、能操作的内容出发：文本、按钮、表单、链接、状态变化和可访问名称。",
-        "不要断言组件内部 state、私有函数或 className 拼接，除非这些就是公共契约。组件内部实现越少暴露，重构越安全。",
+        "setup 是测试前准备，teardown 是测试后清理。它们的目标不是减少几行代码，而是保证每个测试都在可预测的状态下运行。",
+        "beforeEach 和 afterEach 适合处理每个用例都要重置的状态，例如 mock、localStorage、DOM 和 fake timers。",
       ],
     },
     {
-      heading: "查询方式的优先级",
+      heading: "一次性资源",
       body: [
-        "Testing Library 推荐优先使用 getByRole、getByLabelText、getByText 等接近用户感知的查询。它们能顺便推动组件保持可访问。",
-        "当界面需要等待异步渲染时，使用 findByRole 或 waitFor。不要用固定时间 sleep 等待 DOM。",
+        "beforeAll 和 afterAll 适合昂贵的一次性资源，例如启动测试服务器、建立数据库连接或准备全局 fixture。",
+        "只要资源会被测试修改，就要小心共享状态。共享资源能提升速度，但也更容易让测试互相影响。",
       ],
     },
     {
-      heading: "环境配置",
+      heading: "清理优先于补救",
       body: [
-        "React 组件通常需要 DOM 环境。Vitest 中可以配置 environment: jsdom，并在 setupFiles 中引入 @testing-library/jest-dom/vitest 扩展 matcher。",
-        "组件测试比纯函数测试慢一点，所以只把真正涉及渲染、交互和可访问行为的逻辑放进组件测试。",
+        "好的 teardown 会让测试失败后仍然能恢复环境。不要依赖测试顺序，也不要让某个测试的残留状态成为下个测试的隐式前提。",
+        "如果测试偶尔失败，第一时间检查是否有未清理的 mock、计时器、DOM、网络拦截或本地存储。",
       ],
     },
   ],
   examples: [
     {
-      title: "测试按钮交互",
-      code: `import { render, screen } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
-import { expect, it } from 'vitest'
-import { CompletionButton } from './CompletionButton'
+      title: "每个用例前后保持干净状态",
+      code: `import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 
-it('marks the lesson as completed', async () => {
-  const user = userEvent.setup()
-  render(<CompletionButton />)
+beforeEach(() => {
+  vi.useFakeTimers()
+  localStorage.setItem('theme', 'light')
+})
 
-  await user.click(screen.getByRole('button', { name: '标记完成' }))
+afterEach(() => {
+  // 重点：先恢复计时器，再清理 mock 和持久化状态
+  vi.useRealTimers()
+  vi.restoreAllMocks()
+  localStorage.clear()
+})
 
-  expect(screen.getByRole('button', { name: '已完成' })).toBeDisabled()
+it('saves the selected theme', () => {
+  localStorage.setItem('theme', 'dark')
+
+  expect(localStorage.getItem('theme')).toBe('dark')
 })`,
-      focusLines: [10, 12],
+      focusLines: [3, 8, 9, 10, 11, 12],
     },
     {
-      title: "组件测试环境配置",
-      code: `import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
+      title: "一次性准备和释放资源",
+      code: `import { afterAll, beforeAll, expect, it } from 'vitest'
+import { createTestServer } from './test-server'
 
-export default defineConfig({
-  plugins: [react()],
-  test: {
-    environment: 'jsdom',
-    setupFiles: './src/test/setup.ts'
-  }
+let server: Awaited<ReturnType<typeof createTestServer>>
+
+beforeAll(async () => {
+  // 重点：昂贵资源只启动一次，减少重复成本
+  server = await createTestServer()
+})
+
+afterAll(async () => {
+  // 重点：释放资源，避免 CI 进程无法正常退出
+  await server.close()
+})
+
+it('responds with a health status', async () => {
+  const response = await server.get('/health')
+
+  expect(response.status).toBe(200)
 })`,
-      focusLines: [6, 7, 8],
+      focusLines: [6, 7, 11, 12, 13],
     },
   ],
   recap: [
     {
-      question: "React 组件测试为什么优先使用 getByRole？",
+      question: "beforeEach 和 beforeAll 的核心区别是什么？",
       answer:
-        "getByRole 更接近用户和辅助技术看到的界面，也能暴露按钮、表单等元素的可访问名称问题。",
+        "beforeEach 会在每个用例前运行，适合重置状态；beforeAll 只在当前作用域所有用例前运行一次，适合昂贵的一次性资源。",
     },
     {
-      question: "为什么不建议断言组件内部 state？",
+      question: "afterEach 通常应该清理哪些内容？",
       answer:
-        "内部 state 是实现细节。用户关心的是界面结果和交互反馈，绑定 state 会让重构成本变高。",
+        "通常清理 mock、fake timers、DOM、localStorage、网络拦截和其他会影响后续测试的全局状态。",
     },
     {
-      question: "组件测试通常需要什么 Vitest 环境？",
+      question: "为什么共享资源有风险？",
       answer:
-        "通常需要 jsdom 环境，让 React 组件可以在测试中使用 DOM API 渲染和交互。",
+        "共享资源可能被某个测试修改，导致后续测试依赖隐式状态，从而出现顺序相关或偶发失败。",
     },
     {
-      question: "什么时候应该用 findByRole？",
+      question: "测试偶发失败时，优先检查什么？",
       answer:
-        "当界面内容需要等待异步渲染后才出现时，findByRole 会等待目标元素，比固定 sleep 更可靠。",
+        "优先检查未恢复的 mock、计时器、异步任务、DOM、存储和网络拦截，因为它们最容易跨测试污染。",
     },
     {
-      question: "@testing-library/jest-dom/vitest 通常放在哪里？",
+      question: "teardown 为什么要在测试失败时也能工作？",
       answer:
-        "通常放在 setupFiles 指向的测试准备文件里，用来扩展 toBeInTheDocument、toBeDisabled 等 DOM matcher。",
+        "测试失败不应该破坏后续测试环境。可靠的 teardown 能让失败局部化，避免一个错误拖垮整组用例。",
     },
   ],
 };

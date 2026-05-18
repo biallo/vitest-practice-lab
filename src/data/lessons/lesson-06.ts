@@ -2,96 +2,90 @@ import type { Course } from "../../types/course";
 
 export const lesson06: Course = {
   id: "lesson-06",
-  title: "10. Mock 函数",
-  level: "进阶",
-  summary: "使用 vi.fn、vi.spyOn 和模块 mock 隔离依赖。",
+  title: "06. 测试异步代码",
+  level: "基础",
+  summary: "测试 Promise、async/await、错误分支与等待时机。",
   sections: [
     {
-      heading: "Mock 的目标是控制边界",
+      heading: "异步测试必须等待结果",
       body: [
-        "Mock 不是为了让测试“看起来通过”，而是为了控制当前测试不关心的边界，例如网络、时间、随机数、日志或第三方 SDK。",
-        "能用真实纯函数完成的测试，不要急着 mock。过度 mock 会让测试绑定实现细节，降低重构自由度。",
+        "异步测试最常见的问题是测试函数已经结束，但异步断言还没有执行。Vitest 只有在你 return Promise 或使用 async/await 时，才知道应该等待。",
+        "凡是依赖异步结果的断言，都应该出现在 await 之后，或者使用 await expect(promise).resolves/rejects。",
       ],
     },
     {
-      heading: "vi.fn 与 vi.spyOn",
+      heading: "错误路径和成功路径一样重要",
       body: [
-        "vi.fn 创建一个可记录调用的新函数，适合作为回调、依赖注入或替身实现。你可以断言它被调用的次数、参数和返回值。",
-        "vi.spyOn 观察对象上已有的方法，适合临时替换 console、Date、storage 或服务对象方法。用完要 restore，避免污染其它测试。",
+        "网络失败、权限不足、空数据和超时都是用户真实会遇到的情况。只测试 happy path 会让代码在异常路径上没有保护。",
+        "测试错误路径时，断言应该落在业务响应上，例如返回默认值、抛出明确错误、展示错误消息，而不是仅仅确认 catch 被执行。",
       ],
     },
     {
-      heading: "模块 mock",
+      heading: "控制时间和重试",
       body: [
-        "模块 mock 用来替换整个导入模块，适合隔离网络层、持久化层或大型依赖。Vitest 的 vi.mock 会影响导入时拿到的模块实现。",
-        "模块 mock 最好放在文件顶部，并保持替身尽量小。只 mock 当前测试真正需要控制的 API。",
+        "涉及 setTimeout、重试、轮询或 debounce 的逻辑，不应该让测试真实等待几秒钟。Vitest 提供 fake timers 来控制时间推进。",
+        "使用 fake timers 时，要在每个测试后恢复真实定时器，避免影响同文件后续测试。",
       ],
     },
   ],
   examples: [
     {
-      title: "用 vi.fn 验证回调",
-      code: `import { expect, it, vi } from 'vitest'
-import { completeLesson } from './completeLesson'
+      title: "等待 Promise 结果",
+      code: `import { expect, it } from 'vitest'
+import { loadLesson } from './loadLesson'
 
-it('notifies when a lesson is completed', () => {
-  const onComplete = vi.fn()
+it('loads lesson details', async () => {
+  const lesson = await loadLesson('lesson-01')
 
-  completeLesson('lesson-06', onComplete)
-
-  expect(onComplete).toHaveBeenCalledTimes(1)
-  expect(onComplete).toHaveBeenCalledWith('lesson-06')
+  expect(lesson.title).toBe('认识 Vitest')
+  expect(lesson.completed).toBe(false)
 })`,
-      focusLines: [5, 9, 10],
+      focusLines: [4, 5, 7],
     },
     {
-      title: "用 spy 临时替换方法",
+      title: "用 fake timers 测试延迟逻辑",
       code: `import { afterEach, expect, it, vi } from 'vitest'
 
 afterEach(() => {
-  vi.restoreAllMocks()
+  vi.useRealTimers()
 })
 
-it('writes a warning for duplicate lessons', () => {
-  const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+it('marks a save operation as timed out', async () => {
+  vi.useFakeTimers()
+  const promise = saveWithTimeout()
 
-  addLesson({ id: 'lesson-06' })
+  await vi.advanceTimersByTimeAsync(5000)
 
-  expect(warn).toHaveBeenCalledWith('lesson already exists')
+  await expect(promise).rejects.toThrow('save timed out')
 })`,
-      focusLines: [4, 8, 12],
+      focusLines: [8, 11, 13],
     },
   ],
   recap: [
     {
-      question: "vi.fn 适合什么场景？",
+      question: "为什么异步测试函数通常要写成 async？",
       answer:
-        "适合创建一个新的可观察函数，例如回调、依赖注入函数或简单替身，并断言调用次数和参数。",
+        "这样可以用 await 等待异步结果，Vitest 也能知道测试应该等 Promise 完成后再判断通过或失败。",
     },
     {
-      question: "vi.spyOn 和 vi.fn 的区别是什么？",
+      question: "测试 rejects 时为什么要加 await？",
       answer:
-        "vi.spyOn 作用在已有对象方法上，可以观察或替换原方法；vi.fn 是直接创建一个新的 mock 函数。",
+        "rejects 返回的是一个异步断言 Promise，不 await 的话测试可能提前结束，失败不会被正确捕获。",
     },
     {
-      question: "为什么 spy 或 mock 用完要恢复？",
+      question: "fake timers 用完后为什么要恢复？",
       answer:
-        "它们可能改变全局对象或共享模块的行为，不恢复会污染后续测试，让失败变得随机。",
+        "fake timers 会改变当前测试环境的定时器行为，不恢复会污染后续测试，造成难以定位的失败。",
     },
     {
-      question: "Mock 的目标是什么？",
+      question: "异步错误路径为什么要像成功路径一样测试？",
       answer:
-        "Mock 的目标是控制当前测试不关心的边界，例如网络、时间、随机数、日志或第三方 SDK。",
+        "网络失败、超时、空数据等异常路径是用户真实会遇到的情况，只测成功路径无法保护这些行为。",
     },
     {
-      question: "为什么过度 mock 会降低测试价值？",
+      question: "什么时候不应该用真实 sleep 等待？",
       answer:
-        "过度 mock 会让测试绑定实现细节，代码重构时即使用户行为没变，测试也可能大量失败。",
-    },
-    {
-      question: "模块 mock 最好保持什么原则？",
-      answer:
-        "尽量放在文件顶部，只替换当前测试真正需要控制的 API，并让替身实现保持小而清楚。",
+        "涉及定时器、重试、轮询或 debounce 时，真实等待会让测试变慢且不稳定，应该用 fake timers 控制时间。",
     },
   ],
 };
