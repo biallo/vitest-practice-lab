@@ -29,6 +29,13 @@ npm test
 npm run test:run
 ```
 
+#### 覆盖率
+
+```bash
+npm run coverage
+```
+
+
 ## 编译和构建
 
 ```bash

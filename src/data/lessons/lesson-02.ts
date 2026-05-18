@@ -16,7 +16,7 @@ export const lesson02: Course = {
     {
       heading: "watch 和 run 的差异",
       body: [
-        "直接运行 vitest 时，开发环境默认进入 watch 模式。它会根据模块图只重跑相关测试，适合边写代码边获得反馈。",
+        "直接运行 vitest 时，开发环境默认进入 watch 模式。它会根据模块图，仅重跑受影响的相关测试，适合边写代码边获得反馈。",
         "vitest run 是一次性运行，适合 CI、提交前检查和生成稳定报告。开发脚本和 CI 脚本应该分开命名，避免 CI 卡在 watch 模式。",
       ],
     },

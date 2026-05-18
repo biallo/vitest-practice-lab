@@ -8,7 +8,7 @@ export const lesson11: Course = {
     "学习 vi.mock、部分 mock 和模块缓存控制，隔离网络、时间和第三方依赖。",
   sections: [
     {
-      heading: "为什么 mock 模块",
+      heading: "什么时候需要 mock 模块",
       body: [
         "模块 mock 的目的不是让测试看起来更容易通过，而是隔离不可控边界。网络请求、第三方 SDK、随机数、时间和浏览器 API 都可能让测试慢、不稳定或难以复现。",
         "mock 后，测试应该仍然断言业务可见结果，而不是只验证某个内部函数有没有被调用。",

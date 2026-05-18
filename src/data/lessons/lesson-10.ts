@@ -4,7 +4,7 @@ export const lesson10: Course = {
   id: "lesson-10",
   title: "10. Mock 函数",
   level: "进阶",
-  summary: "使用 vi.fn、vi.spyOn 和模块 mock 隔离依赖。",
+  summary: "使用 vi.fn 和 vi.spyOn 控制函数边界，学习调用断言和 mock 恢复。",
   sections: [
     {
       heading: "Mock 的目标是控制边界",
@@ -21,10 +21,10 @@ export const lesson10: Course = {
       ],
     },
     {
-      heading: "模块 mock",
+      heading: "不要过度 mock",
       body: [
-        "模块 mock 用来替换整个导入模块，适合隔离网络层、持久化层或大型依赖。Vitest 的 vi.mock 会影响导入时拿到的模块实现。",
-        "模块 mock 最好放在文件顶部，并保持替身尽量小。只 mock 当前测试真正需要控制的 API。",
+        "如果一个依赖是稳定的纯函数，优先使用真实实现。mock 应该用于控制测试边界，而不是替代正常的输入输出验证。",
+        "断言 mock 调用时，只检查对业务有意义的交互。过度检查内部调用顺序和中间参数，会让测试很容易被重构打碎。",
       ],
     },
   ],
@@ -89,9 +89,9 @@ it('writes a warning for duplicate lessons', () => {
         "过度 mock 会让测试绑定实现细节，代码重构时即使用户行为没变，测试也可能大量失败。",
     },
     {
-      question: "模块 mock 最好保持什么原则？",
+      question: "什么时候不应该急着 mock？",
       answer:
-        "尽量放在文件顶部，只替换当前测试真正需要控制的 API，并让替身实现保持小而清楚。",
+        "当依赖是稳定的纯函数，或者真实实现能让测试更接近业务行为时，不应该为了方便而急着 mock。",
     },
   ],
 };
