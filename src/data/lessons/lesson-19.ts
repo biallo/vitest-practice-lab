@@ -2,7 +2,7 @@ import type { Course } from "../../types/course";
 
 export const lesson19: Course = {
   id: "lesson-19",
-  title: "19. 数据驱动测试",
+  title: "05. 数据驱动测试",
   level: "进阶",
   summary: "使用 test.each 覆盖多组输入输出，让边界用例更集中、更容易维护。",
   sections: [

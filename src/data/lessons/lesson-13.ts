@@ -2,7 +2,7 @@ import type { Course } from "../../types/course";
 
 export const lesson13: Course = {
   id: "lesson-13",
-  title: "13. Vitest 配置深入",
+  title: "08. Vitest 配置深入",
   level: "进阶",
   summary: "理解 test 配置、匹配规则、全局准备和路径别名，让测试环境稳定可控。",
   sections: [

@@ -2,7 +2,7 @@ import type { Course } from "../../types/course";
 
 export const lesson15: Course = {
   id: "lesson-15",
-  title: "15. Setup 与 Teardown",
+  title: "07. Setup 与 Teardown",
   level: "进阶",
   summary:
     "掌握 beforeEach、afterEach、beforeAll 和 afterAll，让测试准备和清理可预测。",

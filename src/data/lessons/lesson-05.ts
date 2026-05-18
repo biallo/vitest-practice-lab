@@ -2,7 +2,7 @@ import type { Course } from "../../types/course";
 
 export const lesson05: Course = {
   id: "lesson-05",
-  title: "05. 测试异步代码",
+  title: "06. 测试异步代码",
   level: "基础",
   summary: "测试 Promise、async/await、错误分支与等待时机。",
   sections: [

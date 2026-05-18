@@ -2,7 +2,7 @@ import type { Course } from "../../types/course";
 
 export const lesson14: Course = {
   id: "lesson-14",
-  title: "14. 测试环境",
+  title: "09. 测试环境",
   level: "进阶",
   summary: "区分 node、jsdom 和 happy-dom，按测试目标选择合适的运行环境。",
   sections: [

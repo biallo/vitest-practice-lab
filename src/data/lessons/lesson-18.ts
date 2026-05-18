@@ -2,7 +2,7 @@ import type { Course } from "../../types/course";
 
 export const lesson18: Course = {
   id: "lesson-18",
-  title: "18. 浏览器 API 与持久化",
+  title: "12. 浏览器 API 与持久化",
   level: "进阶",
   summary:
     "测试 localStorage、URL、history 和 window API，保证浏览器边界可控且可恢复。",

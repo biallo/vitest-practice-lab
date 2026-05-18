@@ -2,7 +2,7 @@ import type { Course } from "../../types/course";
 
 export const lesson20: Course = {
   id: "lesson-20",
-  title: "20. 测试可维护性",
+  title: "19. 测试可维护性",
   level: "进阶",
   summary: "用清晰命名、测试工厂和行为断言，让测试长期可读、可改、可信任。",
   sections: [

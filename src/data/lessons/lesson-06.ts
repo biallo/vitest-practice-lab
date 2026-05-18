@@ -2,7 +2,7 @@ import type { Course } from "../../types/course";
 
 export const lesson06: Course = {
   id: "lesson-06",
-  title: "06. Mock 函数",
+  title: "10. Mock 函数",
   level: "进阶",
   summary: "使用 vi.fn、vi.spyOn 和模块 mock 隔离依赖。",
   sections: [

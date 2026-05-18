@@ -2,7 +2,7 @@ import type { Course } from "../../types/course";
 
 export const lesson17: Course = {
   id: "lesson-17",
-  title: "17. 测试 React Hook",
+  title: "14. 测试 React Hook",
   level: "进阶",
   summary: "通过组件或 renderHook 验证自定义 Hook 的状态、事件和异步行为。",
   sections: [

@@ -2,7 +2,7 @@ import type { Course } from "../../types/course";
 
 export const lesson10: Course = {
   id: "lesson-10",
-  title: "10. CI 与报告",
+  title: "17. CI 与报告",
   level: "工程化",
   summary: "在 GitHub Actions 中运行测试，输出稳定日志并保留诊断信息。",
   sections: [

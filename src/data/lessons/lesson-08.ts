@@ -2,7 +2,7 @@ import type { Course } from "../../types/course";
 
 export const lesson08: Course = {
   id: "lesson-08",
-  title: "08. 覆盖率",
+  title: "16. 覆盖率",
   level: "进阶",
   summary:
     "理解 statements、branches、functions、lines 的含义，并合理使用覆盖率。",

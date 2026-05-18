@@ -2,7 +2,7 @@ import type { Course } from "../../types/course";
 
 export const lesson09: Course = {
   id: "lesson-09",
-  title: "09. 快照测试",
+  title: "15. 快照测试",
   level: "进阶",
   summary: "用快照固定复杂输出，同时避免把快照当作万能断言。",
   sections: [

@@ -14,6 +14,7 @@ function App() {
   const [completedLessonIds, setCompletedLessonIds] = useState(
     getCompletedLessonIds,
   );
+  const lessonPanelRef = useRef<HTMLElement | null>(null);
   const navRef = useRef<HTMLDivElement | null>(null);
   const lessonButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
 
@@ -60,6 +61,11 @@ function App() {
     }
   }, [activeLessonId]);
 
+  useEffect(() => {
+    lessonPanelRef.current?.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  }, [activeLessonId]);
+
   const selectLesson = (lessonId: string) => {
     setActiveLessonId(lessonId);
     setActiveTab("lecture");
@@ -92,7 +98,7 @@ function App() {
         onSelect={selectLesson}
       />
 
-      <main className="lesson-panel">
+      <main ref={lessonPanelRef} className="lesson-panel">
         <header className="lesson-header">
           <div>
             <p className="eyebrow">{activeLesson.level}</p>

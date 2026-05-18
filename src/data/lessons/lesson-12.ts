@@ -2,7 +2,7 @@ import type { Course } from "../../types/course";
 
 export const lesson12: Course = {
   id: "lesson-12",
-  title: "12. 实战练习",
+  title: "20. 实战练习",
   level: "实战",
   summary:
     "为一个小型业务模块补齐测试，把安装、断言、异步、mock 和 CI 串起来。",
@@ -56,7 +56,7 @@ test.each([
   await user.click(screen.getByRole('button', { name: '标记完成' }))
 
   expect(screen.getByRole('button', { name: '已完成' })).toBeDisabled()
-  expect(screen.getByText('1/12')).toBeInTheDocument()
+  expect(screen.getByText('1/20')).toBeInTheDocument()
 })`,
       focusLines: [5, 6, 8, 9],
     },

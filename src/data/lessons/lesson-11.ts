@@ -2,7 +2,7 @@ import type { Course } from "../../types/course";
 
 export const lesson11: Course = {
   id: "lesson-11",
-  title: "11. 从 Jest 迁移",
+  title: "18. 从 Jest 迁移",
   level: "迁移",
   summary: "比较 Jest 与 Vitest API、配置和迁移策略，降低迁移风险。",
   sections: [
