@@ -67,8 +67,8 @@
 
 .code-block code {
   display: block;
-  min-width: 680px;
   counter-reset: line;
+  white-space: pre-wrap;
 }
 
 .code-block span {

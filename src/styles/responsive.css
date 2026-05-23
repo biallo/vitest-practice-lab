@@ -68,10 +68,6 @@
     grid-template-columns: 1fr;
   }
 
-  .code-block code {
-    min-width: 620px;
-  }
-
   .recap-item summary {
     grid-template-columns: 34px minmax(0, 1fr);
     padding: 14px;
